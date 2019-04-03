@@ -249,11 +249,18 @@ def MMI(MI, index, depth=0, printAtDepth = 0):
 
 def CondEnt2MMI(MMI, CondEnt):
     MI = np.broadcast_to(CondEnt[:,0][:,None], CondEnt[:,1:].shape) - CondEnt[:,1:]
-    index = np.ma.array(np.arange(numRV), mask=False)
+    index = np.ma.array(np.arange(CondEnt.shape[0]), mask=False)
     depth = 0
     return MMI(index, depth, MI)
 
 
+from sklearn.metrics import mean_squared_error
+def MSEscorer(clf, X, y):
+    y_est = clf.predict(X)
+    return np.log(mean_squared_error(y, y_est)*np.pi*2)/2
+
+def varEntropy(y):
+    return np.log(np.var(y)*np.pi*2)/2
 # In[17]:
 
 
@@ -296,22 +303,37 @@ def MI_Unsuperwise(X, scorer):
     return MI
 
 
-# In[ ]:
+from sklearn.neighbors.kde import KernelDensity
+def entropy_Resub(X):
+    '''
+    resubstitution estimate
+    '''
+    kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(X[:,None])
+    #score_sample returns the Log of the probability density
+    logprob = kde.score_samples(X[:,None])
+    return -np.mean(logprob)
 
 
+from sklearn.model_selection import cross_val_score
+def entropy_SplitData(X):
+    '''
+    Splitting Data Estimate with cross validation
+    '''
+    kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(X[:,None])
+    numFold = 5
+    TestSize = X.size/numFold
+    return -np.mean(cross_val_score(kde, X[:,None], cv = numFold))/TestSize
 
-def MI_Unsuperwise(X, scorer):
-    num_RV = X.shape[0]
-    #print ("X shape = {0}".format(num_RV))
-    numMIperRV = np.power(2, num_RV - 1)
-    MI = np.zeros((num_RV, numMIperRV-1))
-    for Resp in range(num_RV):
-        for sI in range(1, numMIperRV):
-            MI[Resp, sI-1] = scorer(X, Resp, ConditionSet(num_RV,Resp,sI))
-    return MI
+
+def entropy_Integral(X):
+    '''
+    Integral Estimate using summation
+    '''
+    kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(X[:,None])
+    logprob = kde.score_samples(X[:,None])
+    return -1*np.average(logprob, weights=np.exp(logprob))
 
 
-# In[ ]:
 
 
 if __name__ == "__main__":
@@ -337,65 +359,61 @@ if __name__ == "__main__":
 #         #print (index.shape)
 #         index.mask[i] = False
 
+    from sklearn.linear_model import LinearRegression
+    linReg = LinearRegression()
+    CVFold = 3
+    KNN = []
+    LinReg2 = []
+    GT2 = []
+    #COV2 = []
+    #for i in range(1, 16):
+    #    cov = 1 - 0.1**
+    #    COV2.append(cov)i
+    COV2 = np.linspace(0, 0.7, 5)
+    for cov in COV2:
+        Gaussian_cov3 = [[1,0,cov],[0,1,cov],[cov,cov,1]]
+        mean3 = [0,0,0]
+        Gaussian_cov2 = [[1,cov],[cov,1]]
+        mean2 = [0,0]
+        x = np.transpose(np.random.multivariate_normal( mean=mean2,
+                                    cov=Gaussian_cov2,
+                                    size = 300))
+    #         DE = computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
+    #         numVar = DE.shape[0]
+    #         MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
+    #         MI = MI/3
+    #         LinReg2.append(MI)
 
-# In[31]:
-
-
-from sklearn.linear_model import LinearRegression
-linReg = LinearRegression()
-CVFold = 3
-KNN = []
-LinReg2 = []
-GT2 = []
-#COV2 = []
-#for i in range(1, 16):
-#    cov = 1 - 0.1**
-#    COV2.append(cov)i
-COV2 = np.linspace(0, 0.7, 5)
-for cov in COV2:
-    Gaussian_cov3 = [[1,0,cov],[0,1,cov],[cov,cov,1]]
-    mean3 = [0,0,0]
-    Gaussian_cov2 = [[1,cov],[cov,1]]
-    mean2 = [0,0]
-    x = np.transpose(np.random.multivariate_normal( mean=mean2,
-                                  cov=Gaussian_cov2,
-                                 size = 300))
-#         DE = computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
-#         numVar = DE.shape[0]
-#         MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
-#         MI = MI/3
-#         LinReg2.append(MI)
-
-    #groundTruth = -0.5*np.log(1-cov*cov)
-    groundTruth = -0.5*np.log(np.linalg.det(np.array(Gaussian_cov2)))
-    GT2.append(groundTruth)
+        #groundTruth = -0.5*np.log(1-cov*cov)
+        groundTruth = -0.5*np.log(np.linalg.det(np.array(Gaussian_cov2)))
+        GT2.append(groundTruth)
 
 
-    MI_knn0 = MI_Unsuperwise(x, MI_knn)
-    print(MI_knn0)
-    index = np.ma.array(np.arange(MI_knn0.shape[0]), mask=False)
-    print(MMI(MI_knn0, index, printAtDepth=-1))
-    KNN.append(np.mean(MI_knn0))
+        MI_knn0 = MI_Unsuperwise(x, MI_knn)
+        print(MI_knn0)
+        index = np.ma.array(np.arange(MI_knn0.shape[0]), mask=False)
+        print(MMI(MI_knn0, index, printAtDepth=-1))
+        KNN.append(np.mean(MI_knn0))
 
 
-# In[32]:
+    # In[32]:
 
 
-fig, ax = plt.subplots()
+    fig, ax = plt.subplots()
 
-ax.scatter(COV2, KNN, c='b', label='KNN')
-#ax.scatter(COV2, LinReg2, c='r', label='Regressor')
-ax.scatter(COV2, GT2, c='g', label='Ground Truth')
+    ax.scatter(COV2, KNN, c='b', label='KNN')
+    #ax.scatter(COV2, LinReg2, c='r', label='Regressor')
+    ax.scatter(COV2, GT2, c='g', label='Ground Truth')
 
-ax.legend()
-plt.show()
+    ax.legend()
+    plt.show()
 
-fig2, ax2 = plt.subplots()
-COV22 = np.log(np.ones(len(COV2)) - COV2)
-ax2.scatter(COV22, KNN, c='b', label='KNN')
-#ax2.scatter(COV22, LinReg2, c='r', label='Regressor')
-ax2.scatter(COV22, GT2, c='g', label='Ground Truth')
+    fig2, ax2 = plt.subplots()
+    COV22 = np.log(np.ones(len(COV2)) - COV2)
+    ax2.scatter(COV22, KNN, c='b', label='KNN')
+    #ax2.scatter(COV22, LinReg2, c='r', label='Regressor')
+    ax2.scatter(COV22, GT2, c='g', label='Ground Truth')
 
-ax2.legend()
-plt.show()
+    ax2.legend()
+    plt.show()
 
