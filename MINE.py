@@ -69,9 +69,10 @@ def create_dataset(data, batch_size=100):
     if data.shape[0] >= batch_size * 2:
         partSize = int(data.shape[0]/2)
         indices = list(range(data.shape[0]))
-        np.random.shuffle(indices)
         valid_idx = indices[:partSize]
         train_idx = indices[partSize:]
+        np.random.shuffle(valid_idx)
+        np.random.shuffle(train_idx)
         train_data = data[train_idx]
         valid_data = data[valid_idx]
         return train_data, valid_data
@@ -107,6 +108,18 @@ def sample_batch(data, resp, cond, batch_size=100, sample_mode='joint', randomJo
     return batch_joint, batch_mar
 
 def train(data, mine_net,mine_net_optim, resp=0, cond=1, batch_size=100          , iter_num=int(1e+3), log_freq=int(1e+2)          , avg_freq=int(1e+1), verbose=True, patience=20, prefix=""):
+    randomJointIdx = False
+    logName = "{0}MINE_train.log".format(prefix)
+    log = open(logName, "w")
+    log.write("resp={0}\n".format(resp))
+    log.write("cond={0}\n".format(cond))
+    log.write("batch_size={0}\n".format(batch_size))
+    log.write("iter_num={0}\n".format(iter_num))
+    log.write("log_freq={0}\n".format(log_freq))
+    log.write("avg_freq={0}\n".format(avg_freq))
+    log.write("patience={0}\n".format(patience))
+    log.write("randomJointIdx={0}\n".format(randomJointIdx))
+    log.close()
     # data is x or y
     result = list()
     ma_et = 1.
@@ -121,7 +134,7 @@ def train(data, mine_net,mine_net_optim, resp=0, cond=1, batch_size=100         
     trainData, validData = create_dataset(data, batch_size)
     for i in range(iter_num):
         #get train data
-        batchTrain = sample_batch(trainData,resp, cond, batch_size=batch_size, randomJointIdx=False)
+        batchTrain = sample_batch(trainData,resp, cond, batch_size=batch_size, randomJointIdx=randomJointIdx)
         mi_lb, ma_et, lossTrain = learn_mine(batchTrain, mine_net, mine_net_optim, ma_et)
         result.append(mi_lb.detach().cpu().numpy())
         train_losses.append(lossTrain.item())
@@ -225,7 +238,6 @@ def worker_Train_Mine_cov(input_arg):
     log.write("Sample_size={0}\n".format(SampleSize))
     log.write("lr={0}\n".format(lr))
     log.write("CV Folds={0}\n".format(CVFold))
-    log.write("patience={0}\n".format(patience))
     log.close
 
     if 'bimodel' == dataType:
@@ -339,8 +351,8 @@ def ParallelWork(input_arg):
 def saveResultFig(figName, GT, Reg, MINE, COV, xlabel):
     fig,ax = plt.subplots()
     ax.scatter(COV, MINE, c='b', label='MINE')
-    # ax.scatter(COV, Reg, c='r', label='Regressor')
-    # ax.scatter(COV, GT, c='g', label='Ground Truth')
+    ax.scatter(COV, Reg, c='r', label='Regressor')
+    ax.scatter(COV, GT, c='g', label='Ground Truth')
     plt.xlabel(xlabel)
     plt.ylabel('mutual information')
     ax.legend()
