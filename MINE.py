@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.autograd as autograd
+import numpy as np
 
 class Mine(nn.Module):
     def __init__(self, input_size=2, hidden_size=100):
@@ -175,9 +176,7 @@ def visualizeTrainLogAndSave(train_loss, valid_loss, figName):
     plt.legend()
     plt.tight_layout()
     fig.savefig(figName, bbox_inches='tight')
-
-
-# In[18]:
+    plt.close()
 
 
 import numpy as np
@@ -201,164 +200,119 @@ def MSEscorer(clf, X, y):
 
 
 linReg = LinearRegression()
-def worker_Train_Mine_cov(input_arg):
-    cov, MINEsize, index = input_arg
-    MINEsize = int(MINEsize)
-    CVFold = 3
-    x = np.transpose(np.random.multivariate_normal( mean=[0,0],
-                                  cov=[[1,cov],[cov,1]],
-                                 size = MINEsize * 10))
-    DE = DC.computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
-    MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
-    MI = MI/2
-    REG = MI
-    GT = -0.5*np.log(1-cov*cov)
-    mine_net = Mine()
-    mine_net_optim = optim.Adam(mine_net.parameters(), lr=1e-3)
-    result, mine_net,tl ,vl = train(np.transpose(x),mine_net,mine_net_optim, verbose=False, batch_size=MINEsize, patience=10, index=index)
-    result_ma = ma(result)
-    MINE = result_ma[-1]
-    filename = "MINE_Train_Fig_cov={0}_size={1}.png".format(cov,MINEsize)
-    visualizeTrainLogAndSave(tl, vl, filename)
-    return cov, MINE, REG, GT, MINEsize
 
-def worker_Train_Mine_cov_bimodel(input_arg):
-    cov, MINEsize, index = input_arg
-    MINEsize = int(MINEsize)
+def worker_Train_Mine_cov(input_arg):
+    cov, MINEsize, index= input_arg
+    MINEsize = int(float(MINEsize))
+    cov = float(cov)
+    index = int(float(index))
+    Size = int(MINEsize*10)
+
+    data = 'gaussian'
+    if 'bimodel' == data:
+        x1 = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,cov],[cov,1]], size=Size))
+        x2 = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,-1*cov],[-1*cov,1]], size=Size))
+        x = x1 + x2
+    elif 'gaussian' == data:
+        x = np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,cov],[cov,1]], size = MINEsize * 10))
     CVFold = 3
-    x = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0],
-                                  cov=[[1,cov],[cov,1]],
-                                 size = MINEsize * 10)) + 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0],
-                                  cov=[[1,-1*cov],[-1*cov,1]],
-                                 size = MINEsize * 10))
     DE = DC.computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
     MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
     MI = MI/2
     REG = MI
     GT = -0.5*np.log(1-cov*cov)
     mine_net = Mine()
-    mine_net_optim = optim.Adam(mine_net.parameters(), lr=1e-3)
+    mine_net_optim = optim.Adam(mine_net.parameters(), lr=1e-6)
     result, mine_net,tl ,vl = train(np.transpose(x),mine_net,mine_net_optim, verbose=False, batch_size=MINEsize, patience=10, index=index)
     result_ma = ma(result)
     MINE = result_ma[-1]
-    filename = "MINE_Train_Fig_cov={0}_size={1}.png".format(cov,MINEsize)
-    visualizeTrainLogAndSave(tl, vl, filename)
-    return cov, MINE, REG, GT, MINEsize
+    return cov, MINE, REG, GT, MINEsize, tl, vl
 
 from multiprocessing.dummy import Pool as ThreadPool
 
-def ParallelWork_cov(Size0):
-    numThreads = 15
-    cov = 1 - 0.9**np.arange(numThreads)
-    size = int(Size0)*np.ones(numThreads)
+def ParallelWork(input_arg):
+    mode, Cov, Size, numThreads, prefix_name = input_arg
+
+    numThreads = int(numThreads)
+    if (numThreads < 1):
+        numThreads = 1
+    if ('cov' == mode):
+        cov = 1 - 0.1**np.arange(numThreads)
+        size = int(Size)*np.ones(numThreads)
+    elif ('size' == mode):
+        size = int(2)**np.arange(numThreads)*50
+        cov = Cov*np.ones(numThreads)
+
     index = np.arange(numThreads)
+
     inputArg = np.concatenate((cov[:,None],size[:,None]),axis=1)
-    inputArg = np.concatenate((inputArg,index[:,None]),axis=1).tolist()
+    inputArg = np.concatenate((inputArg,index[:,None]),axis=1)
+    inputArg = inputArg.tolist()
     pool = ThreadPool(numThreads)
     results = pool.map(worker_Train_Mine_cov, inputArg)
     pool.close()
     pool.join()
+
+    results = np.array(results)
+    COV2 = results[:,0]
+    MINE2 = results[:,1]
+    Reg2 = results[:,2]
+    GT2 = results[:,3]
+    size2 = results[:,4]
+    tl = results[:,5]
+    vl = results[:,6]
+
+    for i in range(numThreads):
+        filename = "{2}MINE_Train_Fig_cov={0}_size={1}.png".format(COV2[i],size2[i],prefix_name)
+        visualizeTrainLogAndSave(tl[i], vl[i], filename)
+
+    if 'cov' == mode:
+        filename = "{0}MINE-{2}_size={1}.png".format(prefix_name, Size, mode)
+        xlabel = "covariance"
+        saveResultFig(filename, GT2, Reg2, MINE2, COV2, xlabel)
+    elif 'size' == mode:
+        filename = "{0}MINE-{2}_cov={1}.png".format(prefix_name, Cov,mode)
+        xlabel = "batch size"
+        saveResultFig(filename, GT2, Reg2, MINE2, size2, xlabel)
+
+
+    if 'cov' == mode:
+        COV2 = COV2.astype(float)
+        COV2 = np.log(np.ones(COV2.shape)-COV2)
+        filename = "{0}MINE-{2}_log_size={1}.png".format(prefix_name, Size, mode)
+        xlabel = "ln(1 - covariance)"
+        saveResultFig(filename, GT2, Reg2, MINE2, COV2, xlabel)
+    elif 'size' == mode:
+        size2 = size2.astype(float)
+        size2 = np.log(size2)
+        filename = "{0}MINE-{2}_log_cov={1}.png".format(prefix_name, Cov, mode)
+        xlabel = "ln(size)"
+        saveResultFig(filename, GT2, Reg2, MINE2, size2, xlabel)
+
+    plt.close('all')
     return results
 
-def ParallelWork_size(Cov0):
-    numThreads = 7
-    size = int(2)**np.arange(numThreads)*50
-    cov = Cov0*np.ones(numThreads)
-    index = np.arange(numThreads)
-    inputArg = np.concatenate((cov[:,None],size[:,None]),axis=1)
-    inputArg = np.concatenate((inputArg,index[:,None]),axis=1).tolist()
-    pool = ThreadPool(numThreads)
-    results = pool.map(worker_Train_Mine_cov, inputArg)
-    pool.close()
-    pool.join()
-    return results
-
-def ParallelWork_cov_bimodel(Size0):
-    numThreads = 15
-    cov = 1 - 0.5**np.arange(numThreads)
-    size = int(Size0)*np.ones(numThreads)
-    index = np.arange(numThreads)
-    inputArg = np.concatenate((cov[:,None],size[:,None]),axis=1)
-    inputArg = np.concatenate((inputArg,index[:,None]),axis=1).tolist()
-    pool = ThreadPool(numThreads)
-    results = pool.map(worker_Train_Mine_cov_bimodel, inputArg)
-    pool.close()
-    pool.join()
-    return results
-
-def saveResultFig(figName, GT, Reg, MINE, COV):
+def saveResultFig(figName, GT, Reg, MINE, COV, xlabel):
     fig,ax = plt.subplots()
     ax.scatter(COV, MINE, c='b', label='MINE')
     # ax.scatter(COV, Reg, c='r', label='Regressor')
     # ax.scatter(COV, GT, c='g', label='Ground Truth')
+    plt.xlabel(xlabel)
+    plt.ylabel('mutual information')
     ax.legend()
     fig.savefig(figName, bbox_inches='tight')
+    plt.close()
+
 
 
 # In[16]:
 if __name__ == "__main__":
-
-    MINEsize2 = 400
-    result = np.array(ParallelWork_cov_bimodel(MINEsize2))
-
-
-    # In[ ]:cd cd 
-
-
-    COV2 = result[:,0]
-    MINE2 = result[:,1]
-    Reg2 = result[:,2]
-    GT2 = result[:,3]
-
-    filename = "MINE_Upper_bound_size={0}.png".format(MINEsize2)
-    saveResultFig(filename, GT2, Reg2, MINE2, COV2)
-
-    COV2 = np.log(np.ones(COV2.shape)-COV2)
-    filename = "MINE_Upper_bound_log_size={0}.png".format(MINEsize2)
-    saveResultFig(filename, GT2, Reg2, MINE2, COV2)
-
-
-    # result = np.array(ParallelWork_cov(MINEsize2))
-
-
-    # # In[ ]:cd cd 
-
-
-    # COV2 = result[:,0]
-    # MINE2 = result[:,1]
-    # Reg2 = result[:,2]
-    # GT2 = result[:,3]
-
-    # filename = "MINE_Upper_bound_size={0}.png".format(MINEsize2)
-    # saveResultFig(filename, GT2, Reg2, MINE2, COV2)
-
-    # COV2 = np.log(np.ones(COV2.shape)-COV2)
-    # filename = "MINE_Upper_bound_log_size={0}.png".format(MINEsize2)
-    # saveResultFig(filename, GT2, Reg2, MINE2, COV2)
-
-
-    # # In[ ]:
-
-
-    # plt.close('all')
-    # cov = 0.999999
-
-    # result = np.array(ParallelWork_size(cov))
-
-
-    # # In[15]:
-
-
-    # COV2 = result[:,0]
-    # MINE2 = result[:,1]
-    # Reg2 = result[:,2]
-    # GT2 = result[:,3]
-    # size2 = result[:,4]
-
-    # filename = "MINE_size_Upper_bound_cov={0}.png".format(cov)
-    # saveResultFig(filename, GT2, Reg2, MINE2, size2)
-
-    # size2 = np.log(size2)
-    # filename = "MINE_size_log_Upper_bound_cov={0}.png".format(cov)
-    # saveResultFig(filename, GT2, Reg2, MINE2, size2)
-
+    from datetime import datetime
+    import os
+    folderName = "data/{0}/".format(datetime.now())
+    os.mkdir(folderName)
+    cov = 0
+    batch_size = 400
+    samples = 6
+    input_arg = 'size', cov, batch_size, samples, folderName
+    ParallelWork(input_arg)
