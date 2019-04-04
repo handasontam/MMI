@@ -106,7 +106,7 @@ def sample_batch(data, resp, cond, batch_size=100, sample_mode='joint', randomJo
         batch_joint = batch_joint[:,whole]
     return batch_joint, batch_mar
 
-def train(data, mine_net,mine_net_optim, resp=0, cond=1, batch_size=100          , iter_num=int(1e+3), log_freq=int(1e+2)          , avg_freq=int(1e+1), verbose=True, patience=20, index=0):
+def train(data, mine_net,mine_net_optim, resp=0, cond=1, batch_size=100          , iter_num=int(1e+3), log_freq=int(1e+2)          , avg_freq=int(1e+1), verbose=True, patience=20, prefix=""):
     # data is x or y
     result = list()
     ma_et = 1.
@@ -117,7 +117,7 @@ def train(data, mine_net,mine_net_optim, resp=0, cond=1, batch_size=100         
     avg_train_losses = []
     avg_valid_losses = []
     
-    earlyStop = EarlyStopping(patience=patience, verbose=True)
+    earlyStop = EarlyStopping(patience=patience, verbose=True, prefix=prefix)
     trainData, validData = create_dataset(data, batch_size)
     for i in range(iter_num):
         #get train data
@@ -144,12 +144,12 @@ def train(data, mine_net,mine_net_optim, resp=0, cond=1, batch_size=100         
             train_losses = []
             valid_losses = []
 
-            earlyStop(valid_loss, mine_net, index=index)
+            earlyStop(valid_loss, mine_net)
             if (earlyStop.early_stop):
                 print("Early stopping")
                 break
     
-    ch = "checkpoint_{0}.pt".format(index)
+    ch = "{0}checkpoint.pt".format(prefix)
     mine_net.load_state_dict(torch.load(ch))#'checkpoint.pt'))
     return result, mine_net, avg_train_losses, avg_valid_losses
 
@@ -201,38 +201,59 @@ def MSEscorer(clf, X, y):
 
 linReg = LinearRegression()
 
+import os
 def worker_Train_Mine_cov(input_arg):
-    cov, MINEsize, index= input_arg
-    MINEsize = int(float(MINEsize))
+    cov, MINEsize, index, prefix= input_arg
     cov = float(cov)
     index = int(float(index))
-    Size = int(MINEsize*10)
-
-    data = 'gaussian'
-    if 'bimodel' == data:
-        x1 = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,cov],[cov,1]], size=Size))
-        x2 = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,-1*cov],[-1*cov,1]], size=Size))
-        x = x1 + x2
-    elif 'gaussian' == data:
-        x = np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,cov],[cov,1]], size = MINEsize * 10))
+    MINEsize = int(float(MINEsize))
+    SampleSize = int(MINEsize*10)
+    
+    dataType = 'gaussian'
+    lr = 1e-3
     CVFold = 3
+    patience = 10
+
+    prefix_name = "{0}_{1}/".format(prefix, index)
+    os.mkdir(prefix_name)
+
+    logName = "{0}parameter.log".format(prefix_name)
+    log = open(logName, "w")
+    log.write("dataType={0}\n".format(dataType))
+    log.write("cov={0}\n".format(cov))
+    log.write("batch_size={0}\n".format(MINEsize))
+    log.write("Sample_size={0}\n".format(SampleSize))
+    log.write("lr={0}\n".format(lr))
+    log.write("CV Folds={0}\n".format(CVFold))
+    log.write("patience={0}\n".format(patience))
+    log.close
+
+    if 'bimodel' == dataType:
+        x1 = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,cov],[cov,1]], size=SampleSize))
+        x2 = 0.5 * np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,-1*cov],[-1*cov,1]], size=SampleSize))
+        x = x1 + x2
+    elif 'gaussian' == dataType:
+        x = np.transpose(np.random.multivariate_normal( mean=[0,0], cov=[[1,cov],[cov,1]], size = SampleSize))
+    np.savetxt("{0}Sample.txt".format(prefix_name), x)
+
     DE = DC.computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
     MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
     MI = MI/2
     REG = MI
     GT = -0.5*np.log(1-cov*cov)
     mine_net = Mine()
-    mine_net_optim = optim.Adam(mine_net.parameters(), lr=1e-6)
-    result, mine_net,tl ,vl = train(np.transpose(x),mine_net,mine_net_optim, verbose=False, batch_size=MINEsize, patience=10, index=index)
+    mine_net_optim = optim.Adam(mine_net.parameters(), lr=lr)
+    result, mine_net,tl ,vl = train(np.transpose(x),mine_net,mine_net_optim, verbose=False, batch_size=MINEsize, patience=patience, prefix=prefix_name)
     result_ma = ma(result)
     MINE = result_ma[-1]
     return cov, MINE, REG, GT, MINEsize, tl, vl
 
+from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
 
 def ParallelWork(input_arg):
-    mode, Cov, Size, numThreads, prefix_name = input_arg
-
+    mode, Cov, Size, numThreads = input_arg
+    
     numThreads = int(numThreads)
     if (numThreads < 1):
         numThreads = 1
@@ -243,11 +264,29 @@ def ParallelWork(input_arg):
         size = int(2)**np.arange(numThreads)*50
         cov = Cov*np.ones(numThreads)
 
-    index = np.arange(numThreads)
+    prefix_name = "data/{0}/".format(datetime.now())
+    os.mkdir(prefix_name)
 
+    logName = "{0}parameter.log".format(prefix_name)
+    log = open(logName, "w")
+    log.write("mode={0}\n".format(mode))
+    log.write("#Thread={0}\n".format(numThreads))
+    if 'cov' == mode:
+        log.write("size={0}\n".format(Size))
+        log.write("cov={0}\n".format(cov))
+    elif 'size' == mode:
+        log.write("size={0}\n".format(size))
+        log.write("cov={0}\n".format(Cov))
+    log.close()
+
+    index = np.arange(numThreads)
+    prefix_array = np.array([prefix_name for _ in range(numThreads)])
     inputArg = np.concatenate((cov[:,None],size[:,None]),axis=1)
     inputArg = np.concatenate((inputArg,index[:,None]),axis=1)
+    inputArg = np.concatenate((inputArg,prefix_array[:,None]),axis=1)
     inputArg = inputArg.tolist()
+
+    #Workers start working
     pool = ThreadPool(numThreads)
     results = pool.map(worker_Train_Mine_cov, inputArg)
     pool.close()
@@ -255,10 +294,15 @@ def ParallelWork(input_arg):
 
     results = np.array(results)
     COV2 = results[:,0]
+    np.savetxt("{0}cache_COV.txt".format(prefix_name), COV2)
     MINE2 = results[:,1]
+    np.savetxt("{0}cache_MINE.txt".format(prefix_name), MINE2)
     Reg2 = results[:,2]
+    np.savetxt("{0}cache_REG.txt".format(prefix_name), Reg2)
     GT2 = results[:,3]
+    np.savetxt("{0}cache_GT.txt".format(prefix_name), GT2)
     size2 = results[:,4]
+    np.savetxt("{0}cache_size.txt".format(prefix_name), size2)
     tl = results[:,5]
     vl = results[:,6]
 
@@ -307,12 +351,8 @@ def saveResultFig(figName, GT, Reg, MINE, COV, xlabel):
 
 # In[16]:
 if __name__ == "__main__":
-    from datetime import datetime
-    import os
-    folderName = "data/{0}/".format(datetime.now())
-    os.mkdir(folderName)
-    cov = 0
+    cov = 0.99999
     batch_size = 400
     samples = 6
-    input_arg = 'size', cov, batch_size, samples, folderName
+    input_arg = 'cov', cov, batch_size, samples
     ParallelWork(input_arg)
