@@ -332,9 +332,35 @@ def entropy_Integral(X):
     kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(X[:,None])
     logprob = kde.score_samples(X[:,None])
     return -1*np.average(logprob, weights=np.exp(logprob))
+#%%
+import MINE
+def MI_MINE(X):
+    num_RV = X.shape[0]
+    #print ("X shape = {0}".format(num_RV))
+    numMIperRV = np.power(2, num_RV - 1)
+    MI = np.zeros((num_RV, numMIperRV-1))
 
+    for Resp in range(num_RV):
+        for sI in range(1, numMIperRV):
+            #MI[Resp, sI-1] = scorer(X, Resp, ConditionSet(num_RV,Resp,sI))
+            cond = ConditionSet(num_RV,Resp,sI)
+            mine_net = MINE.Mine(input_size=len(cond)+1)
+            print(ConditionSet(num_RV,Resp,sI))
+            mine_net_optim = MINE.optim.Adam(mine_net.parameters(), lr=1e-3)
+            result, mine_net,tl ,vl = MINE.train(np.transpose(x),mine_net,mine_net_optim,                                     resp = Resp, cond = cond,                                    verbose=False, batch_size=100, patience=20)
+            result_ma = MINE.ma(result)
+            MI[Resp, sI-1] = result_ma[-1]
+    return MI
 
-
+from mpl_toolkits.mplot3d import Axes3D
+def plot3dGaussian():
+    x = np.random.multivariate_normal( mean=[0,0,0],
+                                    cov=[[1,0,-0.5],[0,1,-0.5],[-0.5,-0.5,1]],
+                                    size = 300)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(x[:,0], x[:,1], x[:,2])
+    plt.show()
 
 if __name__ == "__main__":
     #TestSubsetAndIndex(6)
@@ -365,6 +391,7 @@ if __name__ == "__main__":
     KNN = []
     LinReg2 = []
     GT2 = []
+    MINE2 = []
     #COV2 = []
     #for i in range(1, 16):
     #    cov = 1 - 0.1**
@@ -375,14 +402,15 @@ if __name__ == "__main__":
         mean3 = [0,0,0]
         Gaussian_cov2 = [[1,cov],[cov,1]]
         mean2 = [0,0]
-        x = np.transpose(np.random.multivariate_normal( mean=mean2,
-                                    cov=Gaussian_cov2,
-                                    size = 300))
-    #         DE = computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
-    #         numVar = DE.shape[0]
-    #         MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
-    #         MI = MI/3
-    #         LinReg2.append(MI)
+        x = np.transpose(np.random.multivariate_normal( mean=mean3,
+                                    cov=Gaussian_cov3,
+                                    size = 10000))
+
+        DE = computeEnt(x, linReg, MSEscorer, varEntropy, CVFold)
+        numVar = DE.shape[0]
+        MI = DE[1,0] + DE[0,0] - DE[0,1] - DE[1,1]
+        MI = MI/2
+        LinReg2.append(MI)
 
         #groundTruth = -0.5*np.log(1-cov*cov)
         groundTruth = -0.5*np.log(np.linalg.det(np.array(Gaussian_cov2)))
@@ -393,8 +421,11 @@ if __name__ == "__main__":
         print(MI_knn0)
         index = np.ma.array(np.arange(MI_knn0.shape[0]), mask=False)
         print(MMI(MI_knn0, index, printAtDepth=-1))
-        KNN.append(np.mean(MI_knn0))
+        KNN.append(MMI(MI_knn0, index, printAtDepth=-1))
 
+        
+        MI_MINE2 = MI_MINE(x)
+        MINE2.append(MI_MINE2)
 
     # In[32]:
 
@@ -402,8 +433,9 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
 
     ax.scatter(COV2, KNN, c='b', label='KNN')
-    #ax.scatter(COV2, LinReg2, c='r', label='Regressor')
+    ax.scatter(COV2, LinReg2, c='r', label='Regressor')
     ax.scatter(COV2, GT2, c='g', label='Ground Truth')
+    ax.scatter(COV2, MINE2, c='y', label='MINE')
 
     ax.legend()
     plt.show()
@@ -411,8 +443,9 @@ if __name__ == "__main__":
     fig2, ax2 = plt.subplots()
     COV22 = np.log(np.ones(len(COV2)) - COV2)
     ax2.scatter(COV22, KNN, c='b', label='KNN')
-    #ax2.scatter(COV22, LinReg2, c='r', label='Regressor')
+    ax2.scatter(COV22, LinReg2, c='r', label='Regressor')
     ax2.scatter(COV22, GT2, c='g', label='Ground Truth')
+    ax2.scatter(COV22, MINE2, c='y', label='MINE')
 
     ax2.legend()
     plt.show()
