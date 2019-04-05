@@ -204,21 +204,42 @@ from sklearn.model_selection import cross_val_score
 
 
 def computeEnt(rv, clf, scorer, entropy, CV_Fold, verbose=False):
+    """[summary]
+    
+    Arguments:
+        rv {[np array]} -- [(num samples) X (num random variable)]
+        clf {[]} -- [description]
+        scorer {[function]} -- [description]
+        entropy {[function]} -- [description]
+        CV_Fold {[int]} -- []
+    
+    Keyword Arguments:
+        verbose {bool} -- [description] (default: {False})
+    
+    Returns:
+        [np array] -- [(num random variable) X (2^(num random variable-1))]
+        example: 
+        [[(H1), (H1|H2), (H1|H3), (H1|H2,H3)], 
+         [(H2), (H2|H1), (H2|H3), (H2|H1,H3)], 
+         [(H3), (H3|H1), (H3|H2), (H3|H1,H2)]]
+    """
+
+    rv = np.transpose(rv)
     num_RV = rv.shape[0]
     _high = np.amax(rv)
     _low = np.amin(rv)
     numComb = np.power(2, num_RV - 1)
-    DEntropy = np.zeros((num_RV, numComb))
+    cond_entropy_table = np.zeros((num_RV, numComb))
     if verbose:
         print (num_RV, " Discrete RVs with range [", _low, ", ", _high, "]")
         print ("Resp\tCond\tH(Resp|Cond)")
     for Resp in range(num_RV):
-        DEntropy[Resp,0] = entropy(rv[Resp])
+        cond_entropy_table[Resp,0] = entropy(rv[Resp])
         for sI in range(1, numComb):
-            DEntropy[Resp,sI] = np.mean(cross_val_score(clf,np.transpose(rv[ConditionSet(num_RV, Resp, sI)]), rv[Resp], cv=CV_Fold, scoring=scorer))
+            cond_entropy_table[Resp,sI] = np.mean(cross_val_score(clf,np.transpose(rv[ConditionSet(num_RV, Resp, sI)]), rv[Resp], cv=CV_Fold, scoring=scorer))
             if verbose:
-                print (Resp, "\t", ConditionSet(num_RV, Resp, sI), "\t", DEntropy[Resp,sI])
-    return DEntropy
+                print (Resp, "\t", ConditionSet(num_RV, Resp, sI), "\t", cond_entropy_table[Resp,sI])
+    return cond_entropy_table 
 
 def getRandomVar_select(method, low, high, RVsize, numRV, depend):
     rv = np.split(method(low, high, size=RVsize*(numRV - 1)), numRV - 1)
@@ -247,10 +268,22 @@ if __name__ == "__main__":
     # CVFold = 3
     # computeEnt(rv, clf, CondDEntropyScorer, DiscreteEntropy, CVFold)
 
-    numRV = 6
-    index = np.ma.array(np.arange(numRV), mask=False)
-    for i in range(numRV):
-        index.mask[i] = True
-        print("CondIndex[{0},{1}]={2}".format(i,index,ConditionIndex(numRV, i, index)))
-        #print (index.shape)
-        index.mask[i] = False
+    # numRV = 6
+    # index = np.ma.array(np.arange(numRV), mask=False)
+    # for i in range(numRV):
+    #     index.mask[i] = True
+    #     print("CondIndex[{0},{1}]={2}".format(i,index,ConditionIndex(numRV, i, index)))
+    #     #print (index.shape)
+    #     index.mask[i] = False
+
+    # TestSubsetAndIndex(3)
+    # import time
+    # from itertools import chain, combinations
+    # def powerset(iterable):
+    #     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    #     s = list(iterable)
+    #     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+    # a = (time.time())
+    # subset(3, 1)
+    # subset(3, 2)
+    print()
