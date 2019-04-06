@@ -11,11 +11,6 @@ class BiModal():
     # Mode[0] separation between the two bivariate gaussians along the x-axis and Mode[1] is the separation along the y-axis
     #
     # Adapated from Ali
-    # rho = .9
-    # mix = .5
-    # Mode = [0, 0]
-    # Rho = [rho, -rho]
-    # N = 400
     def __init__(self, n_samples=400, mean1=0, mean2=0, rho1=0.9, rho2=-0.9, mix=0.5):
         self.n_samples = n_samples
         self.mean1 = mean1
@@ -82,9 +77,10 @@ class BiModal():
 if __name__ == '__main__':
     data = BiModal().data
     ground_truth = BiModal().ground_truth
+    from sklearn.feature_selection import mutual_info_regression
     # print("data", data)
     # print("ground truth", ground_truth)
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     from sklearn import tree
     import pylab as plt
 
@@ -156,6 +152,8 @@ if __name__ == '__main__':
     # print('LinReg: h1 =  ' + str(h_1) + ', h1_0 = ' + str(h_1_given_0))
     plt.scatter(x0, x1_Lpredict, marker='+', color = 'green')
 
+
+    print('MI_Kraskov:', mutual_info_regression(data[:, [0]], data[:, [1]]))
     # ## NeurNet MINE
     # import MINEbase
     # # from MINEbase import *
