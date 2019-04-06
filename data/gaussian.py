@@ -9,7 +9,6 @@ class Gaussian():
     @property
     def data(self):
         """[summary]
-        
         Returns:
             [np array] -- [N by 2 matrix]
         """

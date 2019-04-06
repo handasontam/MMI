@@ -53,7 +53,6 @@ def worker_Train_Mine_cov(input_arg):
         X = BiModal(n_samples=SampleSize, mean=[0,0], covariance=cov)
     elif 'gaussian' == dataType:
         X = Gaussian(n_samples=SampleSize, mean=[0,0], covariance=cov)
-        print(X.ground_truth)
     data = X.data  # 2 X N
     ground_truth = X.ground_truth  # float
     np.savetxt("{0}Sample.txt".format(prefix_name), data)
