@@ -31,7 +31,7 @@ def worker_Train_Mine_cov(input_arg):
     mini_batch_size= int(float(mini_batch_size))
     SampleSize = int(mini_batch_size*10)
     
-    dataType = 'gaussian'
+    dataType = 'bimodal'
     lr = 1e-3
     cvFold = 3
     patience = 10
@@ -49,8 +49,8 @@ def worker_Train_Mine_cov(input_arg):
     log.write("CV Folds={0}\n".format(cvFold))
     log.close
 
-    if 'bimodel' == dataType:
-        X = BiModal(n_samples=SampleSize, mean=[0,0], covariance=cov)
+    if 'bimodal' == dataType:
+        X = BiModal(n_samples=SampleSize, mean1=0, mean2=0, rho1=0.9, rho2=-0.9, mix=0.5)
     elif 'gaussian' == dataType:
         X = Gaussian(n_samples=SampleSize, mean=[0,0], covariance=cov)
     data = X.data  # 2 X N
