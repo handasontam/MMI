@@ -83,35 +83,35 @@ class Mine():
         ma_et = 1.
         
         #Early Stopping
-        train_losses = []
-        valid_losses = []
-        self.avg_train_losses = []
-        self.avg_valid_losses = []
+        train_mi_lb = []
+        valid_mi_lb = []
+        self.avg_train_mi_lb = []
+        self.avg_valid_mi_lb = []
         
         earlyStop = EarlyStopping(patience=self.patience, verbose=self.verbose, prefix=self.prefix)
         for i in range(self.iter_num):
             #get train data
             batchTrain = sample_joint_marginal(train_data, batch_size=self.batch_size, randomJointIdx=randomJointIdx)
-            mi_lb, ma_et, lossTrain = self.update_mine_net(batchTrain, self.mine_net, self.mine_net_optim, ma_et)
+            mi_lb, ma_et, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim, ma_et)
             result.append(mi_lb.detach().cpu().numpy())
-            train_losses.append(lossTrain.item())
+            train_mi_lb.append(mi_lb.item())
             if self.verbose and (i+1)%(self.log_freq)==0:
                 print(result[-1])
             
             mi_lb_valid = self.predict(val_data)
-            valid_losses.append(mi_lb_valid.item())
+            valid_mi_lb.append(mi_lb_valid.item())
             
             if (i+1)%(self.avg_freq)==0:
-                train_loss = np.average(train_losses)
-                valid_loss = np.average(valid_losses)
-                self.avg_train_losses.append(train_loss)
-                self.avg_valid_losses.append(valid_loss)
+                train_loss = -np.average(train_mi_lb)
+                valid_loss = -np.average(valid_mi_lb)
+                self.avg_train_mi_lb.append(train_loss)
+                self.avg_valid_mi_lb.append(valid_loss)
 
                 print_msg = "[{0}/{1}] train_loss: {2} valid_loss: {3}".format(i, self.iter_num, train_loss, valid_loss)
                 print (print_msg)
 
-                train_losses = []
-                valid_losses = []
+                train_mi_lb = []
+                valid_mi_lb = []
 
                 earlyStop(valid_loss, self.mine_net)
                 if (earlyStop.early_stop):
@@ -122,12 +122,11 @@ class Mine():
         self.mine_net.load_state_dict(torch.load(ch))#'checkpoint.pt'))
 
     
-    def update_mine_net(self, batch, mine_net, mine_net_optim, ma_et, ma_rate=0.01):
+    def update_mine_net(self, batch, mine_net_optim, ma_et, ma_rate=0.01):
         """[summary]
         
         Arguments:
             batch {[type]} -- ([batch_size X 2], [batch_size X 2])
-            mine_net {[type]} -- [description]
             mine_net_optim {[type]} -- [description]
             ma_et {[float]} -- [exponential of mi estimation on marginal data]
             ma_rate {float} -- [moving average rate] (default: {0.01})
@@ -141,7 +140,7 @@ class Mine():
         joint , marginal = batch
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
         marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        mi_lb , t, et = self.mutual_information(joint, marginal, mine_net)
+        mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
         ma_et = (1-ma_rate)*ma_et + ma_rate*torch.mean(et)
         
         # unbiasing use moving average
@@ -174,7 +173,7 @@ class Mine():
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
         marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
         mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
-        return -mi_lb
+        return mi_lb
 
 
 

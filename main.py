@@ -31,7 +31,7 @@ def worker_Train_Mine_cov(input_arg):
     mini_batch_size= int(float(mini_batch_size))
     SampleSize = int(mini_batch_size*10)
     
-    dataType = 'bimodal'
+    dataType = 'gaussian'
     lr = 1e-3
     cvFold = 3
     patience = 10
@@ -70,7 +70,7 @@ def worker_Train_Mine_cov(input_arg):
 
     # result_ma = ma(result)
     # MINE = result_ma[-1]
-    return cov, mine_est, linear_reg_est, ground_truth, mini_batch_size, mine.avg_train_losses, mine.avg_valid_losses
+    return cov, mine_est, linear_reg_est, ground_truth, mini_batch_size, mine.avg_train_mi_lb, mine.avg_valid_mi_lb
 
 # 'cov', cov, batch_size, samples
 def ParallelWork(input_arg):
