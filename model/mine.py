@@ -53,7 +53,7 @@ class MineNet(nn.Module):
         return output
 
 class Mine():
-    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True):
+    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(2e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True):
         self.lr = lr
         self.batch_size = batch_size
         self.patience = patience  # 20
@@ -102,8 +102,8 @@ class Mine():
             valid_mi_lb.append(mi_lb_valid.item())
             
             if (i+1)%(self.avg_freq)==0:
-                train_loss = -np.average(train_mi_lb)
-                valid_loss = -np.average(valid_mi_lb)
+                train_loss = - np.average(train_mi_lb)
+                valid_loss = - np.average(valid_mi_lb)
                 self.avg_train_mi_lb.append(train_loss)
                 self.avg_valid_mi_lb.append(valid_loss)
 

@@ -2,7 +2,7 @@
 from sklearn.feature_selection import mutual_info_regression
 
 class Kraskov():
-    def __init__(self, discrete_features, n_neighbors, random_state):
+    def __init__(self, discrete_features, n_neighbors, random_state=None):
         """
         discrete_features : {‘auto’, bool, array_like}, default ‘auto’
         If bool, then determines whether to consider all features discrete or continuous. If array, then it should be either a boolean mask with shape (n_features,) or array with indices of discrete features. If ‘auto’, it is assigned to False for dense X and to True for sparse X.

@@ -11,12 +11,9 @@ import os
 from data import Gaussian, BiModal 
 from data.utils import train_val_split
 from utils import visualizeTrainLogAndSave
-from model import Mine, LinearReg
+from model import Mine, LinearReg, Kraskov
 from datetime import datetime
 from multiprocessing.dummy import Pool as ThreadPool
-
-
-
 
 def ma(a, window_size=100):
     if len(a)<=window_size+1:
@@ -32,7 +29,7 @@ def worker_Train_Mine_cov(input_arg):
     SampleSize = int(mini_batch_size*10)
     
     dataType = 'gaussian'
-    lr = 1e-3
+    lr = 1e-4
     cvFold = 3
     patience = 10
 
@@ -50,7 +47,7 @@ def worker_Train_Mine_cov(input_arg):
     log.close
 
     if 'bimodal' == dataType:
-        X = BiModal(n_samples=SampleSize, mean1=0, mean2=0, rho1=0.9, rho2=-0.9, mix=0.5)
+        X = BiModal(n_samples=SampleSize, mean1=0, mean2=0, rho1=cov, rho2=-cov, mix=0.5)
     elif 'gaussian' == dataType:
         X = Gaussian(n_samples=SampleSize, mean=[0,0], covariance=cov)
     data = X.data  # 2 X N
@@ -68,9 +65,13 @@ def worker_Train_Mine_cov(input_arg):
     # Linear Regressor
     linear_reg_est = LinearReg(cvFold).predict(X.data)
 
+    # Kraskov
+    kraskov_est = Kraskov(discrete_features='auto', 
+                          n_neighbors=3).predict(X.data)
+
     # result_ma = ma(result)
     # MINE = result_ma[-1]
-    return cov, mine_est, linear_reg_est, ground_truth, mini_batch_size, mine.avg_train_mi_lb, mine.avg_valid_mi_lb
+    return cov, mine_est, linear_reg_est, kraskov_est, ground_truth, mini_batch_size, mine.avg_train_mi_lb, mine.avg_valid_mi_lb
 
 # 'cov', cov, batch_size, samples
 def ParallelWork(input_arg):
@@ -121,12 +122,14 @@ def ParallelWork(input_arg):
     np.savetxt("{0}cache_MINE.txt".format(prefix_name), MINE2)
     Reg2 = results[:,2]
     np.savetxt("{0}cache_REG.txt".format(prefix_name), Reg2)
-    GT2 = results[:,3]
+    Kraskov2 = results[:,3]
+    np.savetxt("{0}cache_Kraskov.txt".format(prefix_name), Kraskov2)
+    GT2 = results[:,4]
     np.savetxt("{0}cache_GT.txt".format(prefix_name), GT2)
-    size2 = results[:,4]
+    size2 = results[:,5]
     np.savetxt("{0}cache_size.txt".format(prefix_name), size2)
-    tl = results[:,5]
-    vl = results[:,6]
+    tl = results[:,6]
+    vl = results[:,7]
 
     for i in range(numThreads):
         filename = "{2}MINE_Train_Fig_cov={0}_size={1}.png".format(COV2[i],size2[i],prefix_name)
@@ -135,11 +138,11 @@ def ParallelWork(input_arg):
     if 'cov' == mode:
         filename = "{0}MINE-{2}_size={1}.png".format(prefix_name, Size, mode)
         xlabel = "covariance"
-        saveResultFig(filename, GT2, Reg2, MINE2, COV2, xlabel)
+        saveResultFig(filename, GT2, Reg2, Kraskov2, MINE2, COV2, xlabel)
     elif 'size' == mode:
         filename = "{0}MINE-{2}_cov={1}.png".format(prefix_name, Cov,mode)
         xlabel = "batch size"
-        saveResultFig(filename, GT2, Reg2, MINE2, size2, xlabel)
+        saveResultFig(filename, GT2, Reg2, Kraskov2, MINE2, size2, xlabel)
 
 
     if 'cov' == mode:
@@ -147,31 +150,29 @@ def ParallelWork(input_arg):
         COV2 = np.log(np.ones(COV2.shape)-COV2)
         filename = "{0}MINE-{2}_log_size={1}.png".format(prefix_name, Size, mode)
         xlabel = "ln(1 - covariance)"
-        saveResultFig(filename, GT2, Reg2, MINE2, COV2, xlabel)
+        saveResultFig(filename, GT2, Reg2, Kraskov2, MINE2, COV2, xlabel)
     elif 'size' == mode:
         size2 = size2.astype(float)
         size2 = np.log(size2)
         filename = "{0}MINE-{2}_log_cov={1}.png".format(prefix_name, Cov, mode)
         xlabel = "ln(size)"
-        saveResultFig(filename, GT2, Reg2, MINE2, size2, xlabel)
+        saveResultFig(filename, GT2, Reg2, Kraskov2, MINE2, size2, xlabel)
 
     plt.close('all')
     return results
 
-def saveResultFig(figName, GT, Reg, MINE, COV, xlabel):
+def saveResultFig(figName, GT, Reg, Kraskov, MINE, COV, xlabel):
     fig,ax = plt.subplots()
-    ax.scatter(COV, MINE, c='b', label='MINE')
-    ax.scatter(COV, Reg, c='r', label='Regressor')
-    ax.scatter(COV, GT, c='g', label='Ground Truth')
+    ax.scatter(COV, MINE, edgecolors='b', facecolors='none', label='MINE')
+    ax.scatter(COV, Reg, edgecolors='r', facecolors='none', label='Regressor')
+    ax.scatter(COV, Kraskov, edgecolors='y', facecolors='none', label='Kraskov')
+    ax.scatter(COV, GT, edgecolors='g', facecolors='none', label='Ground Truth')
     plt.xlabel(xlabel)
     plt.ylabel('mutual information')
     ax.legend()
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
-
-
-# In[16]:
 if __name__ == "__main__":
     cov = 0.99999
     batch_size = 300
