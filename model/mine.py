@@ -5,6 +5,7 @@ import torch.optim as optim
 import torch.autograd as autograd
 from .pytorchtools import EarlyStopping
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 
 def sample_joint_marginal(data, batch_size=100, randomJointIdx=True):
@@ -69,15 +70,6 @@ class Mine():
         self.mine_net_optim = optim.Adam(self.mine_net.parameters(), lr=self.lr)
     
         randomJointIdx = False
-        logName = "{0}MINE_train.log".format(self.prefix)
-        log = open(logName, "w")
-        log.write("batch_size={0}\n".format(self.batch_size))
-        log.write("iter_num={0}\n".format(self.iter_num))
-        log.write("log_freq={0}\n".format(self.log_freq))
-        log.write("avg_freq={0}\n".format(self.avg_freq))
-        log.write("patience={0}\n".format(self.patience))
-        log.write("randomJointIdx={0}\n".format(randomJointIdx))
-        log.close()
         # data is x or y
         result = list()
         ma_et = 1.
@@ -98,7 +90,7 @@ class Mine():
             if self.verbose and (i+1)%(self.log_freq)==0:
                 print(result[-1])
             
-            mi_lb_valid = self.predict(val_data)
+            mi_lb_valid = self.forward_pass(val_data)
             valid_mi_lb.append(mi_lb_valid.item())
             
             if (i+1)%(self.avg_freq)==0:
@@ -107,19 +99,20 @@ class Mine():
                 self.avg_train_mi_lb.append(train_loss)
                 self.avg_valid_mi_lb.append(valid_loss)
 
-                print_msg = "[{0}/{1}] train_loss: {2} valid_loss: {3}".format(i, self.iter_num, train_loss, valid_loss)
-                print (print_msg)
+                # print_msg = "[{0}/{1}] train_loss: {2} valid_loss: {3}".format(i, self.iter_num, train_loss, valid_loss)
+                # print (print_msg)
 
                 train_mi_lb = []
                 valid_mi_lb = []
 
                 earlyStop(valid_loss, self.mine_net)
                 if (earlyStop.early_stop):
-                    print("Early stopping")
+                    if self.verbose:
+                        print("Early stopping")
                     break
         
-        ch = "{0}checkpoint.pt".format(self.prefix)
-        self.mine_net.load_state_dict(torch.load(ch))#'checkpoint.pt'))
+        # ch = "{0}checkpoint.pt".format(self.prefix)
+        # self.mine_net.load_state_dict(torch.load(ch))#'checkpoint.pt'))
 
     
     def update_mine_net(self, batch, mine_net_optim, ma_et, ma_rate=0.01):
@@ -158,6 +151,13 @@ class Mine():
         et = torch.exp(self.mine_net(marginal))
         mi_lb = torch.mean(t) - torch.log(torch.mean(et))
         return mi_lb, t, et
+    
+    def forward_pass(self, X):
+        joint , marginal = sample_joint_marginal(X, batch_size=X.shape[0])
+        joint = torch.autograd.Variable(torch.FloatTensor(joint))
+        marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
+        mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
+        return mi_lb
 
     def predict(self, X):
         """[summary]
@@ -168,12 +168,12 @@ class Mine():
         Return:
             mutual information estimate
         """
-        
-        joint , marginal = sample_joint_marginal(X, batch_size=X.shape[0])
-        joint = torch.autograd.Variable(torch.FloatTensor(joint))
-        marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
-        return mi_lb
+        X_train, X_test = train_test_split(
+            X, test_size=0.35, random_state=0)
+        self.fit(X_train, X_test)
+    
+        mi_lb = self.forward_pass(X_test)
+        return mi_lb.item()
 
 
 

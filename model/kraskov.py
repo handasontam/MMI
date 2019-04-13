@@ -1,5 +1,6 @@
 
 from sklearn.feature_selection import mutual_info_regression
+import numpy as np
 
 class Kraskov():
     def __init__(self, discrete_features, n_neighbors, random_state=None):
@@ -21,13 +22,14 @@ class Kraskov():
         """[summary]
         
         Arguments:
-            X {[numpy array]} -- [N X 2]
-
-        Return:
-            mutual information estimate
+            X {[np array]} -- [N X 2]
+        
+        Returns:
+            mutual information estimation
         """
+        
         return mutual_info_regression(X=X[:, [0]], 
-                                      y=X[:, [1]], 
+                                      y=X[:, 1], 
                                       discrete_features=self.discrete_features, 
                                       n_neighbors=self.n_neighbors, 
-                                      random_state=self.random_state)
+                                      random_state=self.random_state)[0]

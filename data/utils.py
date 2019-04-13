@@ -1,29 +1,29 @@
 import numpy as np
-def train_val_split(data, batch_size=100):
-    """[summary]
+# def train_val_split(data, batch_size=100):
+#     """[summary]
     
-    Arguments:
-        data {[numpy array]} -- [2 by N]
+#     Arguments:
+#         data {[numpy array]} -- [2 by N]
     
-    Keyword Arguments:
-        batch_size {int} -- [description] (default: {100})
+#     Keyword Arguments:
+#         batch_size {int} -- [description] (default: {100})
     
-    Returns:
-        [type] -- [description]
-    """
+#     Returns:
+#         [type] -- [description]
+#     """
 
-    if data.shape[0] >= batch_size * 2:
-        partSize = int(data.shape[0]/2)
-        indices = list(range(data.shape[0]))
-        valid_idx = indices[:partSize]
-        train_idx = indices[partSize:]
-        np.random.shuffle(valid_idx)
-        np.random.shuffle(train_idx)
-        train_data = data[train_idx]
-        valid_data = data[valid_idx]
-        return train_data, valid_data
-    else:
-        raise ValueError
+#     if data.shape[0] >= batch_size * 2:
+#         partSize = int(data.shape[0]/2)
+#         indices = list(range(data.shape[0]))
+#         valid_idx = indices[:partSize]
+#         train_idx = indices[partSize:]
+#         np.random.shuffle(valid_idx)
+#         np.random.shuffle(train_idx)
+#         train_data = data[train_idx]
+#         valid_data = data[valid_idx]
+#         return train_data, valid_data
+#     else:
+#         raise ValueError
 
 
 

@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 
 
-def visualizeTrainLogAndSave(train_loss, valid_loss, figName):
+def save_train_curve(train_loss, valid_loss, figName):
     # visualize the loss as the network trained
     fig = plt.figure(figsize=(10,8))
     plt.plot(range(1,len(train_loss)+1),train_loss, label='Training Loss')
