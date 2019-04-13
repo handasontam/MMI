@@ -12,11 +12,11 @@ batch_size=300
 
 # ground truth is plotted in red
 model = {
-    'Linear Regression': {
-        'model': LinearReg(
+    'Linear Regression': {  # model name, for plotting the legend
+        'model': LinearReg(  # initialize the object
             cvFold=3
         ), 
-        'color': 'blue'
+        'color': 'blue'  # for plotting
     }, 
     'Kraskov': {
         'model': Kraskov(
@@ -57,7 +57,7 @@ data = {
                 'rho2': -rho
             } for rho in rhos
         ], 
-        'varying_param_name': 'rho1', # the parameters denoting the x-axis of the plot
+        'varying_param_name': 'rho1', # the parameter name which denotes the x-axis of the plot
         'x_axis_name': 'correlation', 
     }, 
     'Gaussian': {
@@ -84,4 +84,4 @@ data = {
 
 
 n_datasets = len(data)
-n_columns = max([len(rhos), len(widths)])
+# n_columns = max([len(rhos), len(widths)])
