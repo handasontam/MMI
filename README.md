@@ -6,6 +6,15 @@
 ![MI](./img/MI.png)
 
 
+## Dependencies
+- pytorch
+- joblib
+- sklearn
+- numpy
+- scipy
+- matplotlib
+- tqdm
+
 ## How to run
 ```bash
 # check the configuration in settings.py

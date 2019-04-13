@@ -1,7 +1,6 @@
 import numpy as np
 from model import mine
 import numpy as np
-import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -12,7 +11,6 @@ import data
 from utils import save_train_curve
 # from model import Mine, LinearReg, Kraskov
 from datetime import datetime
-from multiprocessing.dummy import Pool as ThreadPool
 from joblib import Parallel, delayed
 import settings
 from tqdm import tqdm
