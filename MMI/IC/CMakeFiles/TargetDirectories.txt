@@ -1,0 +1,3 @@
+/Users/Thomas/Projects/MMI/model/IC/CMakeFiles/rebuild_cache.dir
+/Users/Thomas/Projects/MMI/model/IC/CMakeFiles/edit_cache.dir
+/Users/Thomas/Projects/MMI/model/IC/CMakeFiles/AIC.dir

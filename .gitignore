@@ -1,9 +1,14 @@
 *.png
 *.pt
-__pycache__\*
 __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 *.pyc
 .vscode
 model/deepset.py
+*.log
+*.cmake
+*.check_cache
+*.bin
+model/IC/IC/CMakeFiles/
+model/IC/IC/build/CMakeFiles/
