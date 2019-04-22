@@ -1,10 +1,21 @@
 # import model
-from model.linear_regression import LinearReg
-from model.mine import Mine
-from model.kraskov import Kraskov
-from data.bimodal import BiModal
-from data.gaussian import Gaussian
-from data.uniform import Uniform
+from .model.linear_regression import LinearReg
+from .model.mine import Mine
+from .model.kraskov import Kraskov
+from .model.cart_regression import cartReg
+
+from .model.ShannonKDE import ShanKDE
+from .model.hellingerDiv import hellingerDiv
+from .model.tsallisDiv import tsallisDiv
+from .model.chiSqDiv import chiSqDiv
+from .model.renyiDiv import renyiDiv
+from .model.klDiv import klDiv
+from .model.condShannonEntropy import condShanEnt
+
+from .data.bimodal import BiModal
+from .data.gaussian import Gaussian
+from .data.uniform import Uniform
+import math
 
 cpu = 1
 
@@ -19,27 +30,117 @@ model = {
         ), 
         'color': 'blue'  # for plotting
     }, 
-    'Kraskov': {
-        'model': Kraskov(
-            discrete_features='auto', 
-            n_neighbors=3, 
-            random_state=None
+    # 'Kraskov': {
+    #     'model': Kraskov(
+    #         discrete_features='auto', 
+    #         n_neighbors=3, 
+    #         random_state=None
+    #     ), 
+    #     'color': 'green'
+    # }, 
+    'LOO Shannon KDE': {
+        'model': ShanKDE(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
+        ), 
+        'color': 'magenta'
+    },
+    'LOO hellingerDiv': {
+        'model': hellingerDiv(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
+        ), 
+        'color': 'cyan'
+    }, 
+    # 'LOO tsallisDiv': {
+    #     'model': tsallisDiv(
+    #         numPart='loo', 
+    #         numAvgPart=1, 
+    #         correctBound=False, 
+    #         Low=1e-5, 
+    #         Upp=math.inf, 
+    #         doAsympAnalysis=False,
+    #         alpha=0.5
+    #     ), 
+    #     'color': 'yellow'
+    # }, 
+    'LOO chiSqDiv': {
+        'model': chiSqDiv(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
+        ), 
+        'color': 'black'
+    }, 
+    'LOO renyiDiv': {
+        'model': renyiDiv(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
         ), 
         'color': 'green'
     }, 
-    'MINE': {
-        'model': Mine(
-            lr=1e-4, 
-            batch_size=batch_size, 
-            patience=int(20), 
-            iter_num=int(2e+3), 
-            log_freq=int(100), 
-            avg_freq=int(10), 
-            ma_rate=0.01, 
-            verbose=False
+    'LOO klDiv': {
+        'model': klDiv(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
         ), 
         'color': 'orange'
-    }
+    }, 
+    'LOO condShanEnt': {
+        'model': condShanEnt(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
+        ), 
+        'color': 'pink'
+    }, 
+    # 'Cart Reg': {
+    #     'model': cartReg(
+    #         cvFold=3
+    #     ), 
+    #     'color': 'pink'
+    # },
+    # 'MINE': {
+    #     'model': Mine(
+    #         lr=1e-4, 
+    #         batch_size=batch_size, 
+    #         patience=int(20), 
+    #         iter_num=int(2e+3), 
+    #         log_freq=int(100), 
+    #         avg_freq=int(10), 
+    #         ma_rate=0.01, 
+    #         verbose=False
+    #     ), 
+    #     'color': 'orange'
+    # }
 }
 
 n_samples = batch_size * 20

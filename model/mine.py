@@ -7,6 +7,7 @@ from .pytorchtools import EarlyStopping
 import numpy as np
 from sklearn.model_selection import train_test_split
 from ..MMI.IC.AIC import TableEntropy
+# from .DiscreteCondEnt import subset
 import os
 
 from ..utils import save_train_curve
@@ -33,7 +34,7 @@ from ..utils import save_train_curve
 #     plt.close()
 
 
-def sample_joint_marginal(data, resp=0, cond=[1], batch_size=100):
+def sample_joint_marginal(data, resp=0, cond=[1], batch_size=100, marginal_mode='shuffle'):
     """[summary]
     
     Arguments:
@@ -51,16 +52,20 @@ def sample_joint_marginal(data, resp=0, cond=[1], batch_size=100):
     """
     index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
     batch_joint = data[index]
-    joint_index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
-    marginal_index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
-    if data.shape[1] == 2:
-        batch_mar = np.concatenate([data[joint_index][:,0].reshape(-1,1), data[marginal_index][:,1].reshape(-1,1)], axis=1)
-    else:
-        batch_mar = np.concatenate([data[joint_index][:,resp].reshape(-1,1), data[marginal_index][:,cond].reshape(-1,len(cond))], axis=1)
     if type(cond)==list:
         whole = cond.copy()
         whole.append(resp)
         batch_joint = batch_joint[:, whole]
+    else:
+        raise TypeError("cond should be list")
+    if 'unif' == marginal_mode:
+        dataMax = data.max(axis=0)[whole]
+        dataMin = data.min(axis=0)[whole]
+        batch_mar = (dataMax - dataMin)*np.random.random((batch_size,len(cond)+1)) + dataMin
+    else:
+        joint_index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
+        marginal_index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
+        batch_mar = np.concatenate([data[joint_index][:,resp].reshape(-1,1), data[marginal_index][:,cond].reshape(-1,len(cond))], axis=1)
     return batch_joint, batch_mar
 
 
@@ -84,7 +89,7 @@ class MineNet(nn.Module):
         return output
 
 class Mine():
-    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True, resp=0, cond=[1], log=True):
+    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True, resp=0, cond=[1], log=True, marginal_mode='shuffle'):
         self.lr = lr
         self.batch_size = batch_size
         self.patience = patience  # 20
@@ -97,6 +102,7 @@ class Mine():
         self.resp = resp
         self.cond = cond
         self.log = log
+        self.marginal_mode = marginal_mode
 
     def fit(self, train_data, val_data):
         self.mine_net = MineNet(input_size=len(self.cond)+1)
@@ -124,7 +130,7 @@ class Mine():
         earlyStop = EarlyStopping(patience=self.patience, verbose=self.verbose, prefix=self.prefix)
         for i in range(self.iter_num):
             #get train data
-            batchTrain = sample_joint_marginal(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size)
+            batchTrain = sample_joint_marginal(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, marginal_mode=self.marginal_mode)
             mi_lb, ma_et, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim, ma_et)
             result.append(mi_lb.detach().cpu().numpy())
             train_mi_lb.append(mi_lb.item())
@@ -202,7 +208,7 @@ class Mine():
         return mi_lb, t, et
 
     def forward_pass(self, X):
-        joint , marginal = sample_joint_marginal(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0])
+        joint , marginal = sample_joint_marginal(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], marginal_mode=self.marginal_mode)
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
         marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
         mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
@@ -250,6 +256,7 @@ class Mine():
         for Resp in range(n_var):
             for sI in range(1, numCond):
                 subset = TableEntropy.subsetVector(n_var - 1, sI)
+                # subset = subset(n_var - 1, sI)
                 subset = np.array(subset)
                 cond = []
                 for element in subset:
@@ -262,7 +269,7 @@ class Mine():
                 self.resp = Resp
                 self.cond = cond
                 self.fit(X_train, X_test)
-                # self.savefig()
+                self.savefig()
                 cond_ent_mine[Resp, sI] = self.forward_pass(X_test).item() + cond_ent_mine[Resp, 0]
 
         self.prefix = prefix_base

@@ -1,5 +1,5 @@
 import numpy as np
-from model import mine
+from .model import mine
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 import math
 from scipy.stats import randint
 import os
-import data
-from utils import save_train_curve
+from . import data
+from .utils import save_train_curve
 # from model import Mine, LinearReg, Kraskov
 from datetime import datetime
 from joblib import Parallel, delayed
-import settings
+from . import settings
 from tqdm import tqdm
 
 def saveResultsFig(results_dict):

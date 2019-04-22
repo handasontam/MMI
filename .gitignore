@@ -12,3 +12,4 @@ model/deepset.py
 *.bin
 model/IC/IC/CMakeFiles/
 model/IC/IC/build/CMakeFiles/
+Output/

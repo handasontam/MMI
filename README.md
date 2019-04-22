@@ -18,8 +18,9 @@
 
 ## How to run
 ```bash
+cd ..
 # check the configuration in settings.py
-python main.py
+python -m MMI/main
 ```
 
 ## How to add new mi estimators

@@ -45,9 +45,9 @@ class GaussianEntropy(AIC.SF):
 
 
 if __name__=="__main__":
-    k = 5
+    k = 2
     sigma = 1
-    n = 5
+    n = 3
 
     A = np.zeros([n,n+k])
     for i in range(A.shape[0]):
@@ -83,6 +83,7 @@ if __name__=="__main__":
     for i in range(num_subset):
         TE.append(gsf(AIC.TableEntropy.subsetVector(n, i)))
     
+    print ("TE={0}".format(TE))
     # psp = AIC.AIC(gsf)
     psp = AIC.AIC_TE(TE, n)
 

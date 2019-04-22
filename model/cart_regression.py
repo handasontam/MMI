@@ -1,11 +1,11 @@
 
 from sklearn.tree import DecisionTreeRegressor
 from .DiscreteCondEnt import computeEnt
-from ..utils import mseEntropy, varEntropy, unifEntropy
+from ..utils import mseEntropy, varEntropy, unifEntropy, ShannonEntropy
 
 class cartReg(DecisionTreeRegressor):
 
-    def __init__(self, cvFold):
+    def __init__(self, cvFold=3):
         super().__init__()
         self.cvFold = cvFold
         self.Reg = DecisionTreeRegressor()
@@ -35,5 +35,5 @@ class cartReg(DecisionTreeRegressor):
             [numpy array] -- [n_variables X 2^n_variables]
         """
 
-        cond_entropy = computeEnt(X, self.Reg, mseEntropy, unifEntropy, self.cvFold)
+        cond_entropy = computeEnt(X, self.Reg, mseEntropy, ShannonEntropy, self.cvFold)
         return cond_entropy

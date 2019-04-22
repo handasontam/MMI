@@ -19,7 +19,7 @@ class Uniform():
             [np array] -- [n_sample by n_variables matrix]
         """
 
-        if self.n_variables < 3 or self.n_samples < 1:
+        if self.n_variables < 2 or self.n_samples < 1:
             raise ValueError
         else:
             x = unif(self.low, self.high, self.n_samples*(self.n_variables-1)).reshape(self.n_samples, self.n_variables-1)

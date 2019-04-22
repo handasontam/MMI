@@ -1,7 +1,7 @@
 
 from sklearn.linear_model import LinearRegression
 from .DiscreteCondEnt import computeEnt
-from ..utils import mseEntropy, varEntropy, unifEntropy
+from ..utils import mseEntropy, varEntropy, unifEntropy, ShannonEntropy
 
 
 class LinearReg(LinearRegression):
@@ -35,5 +35,5 @@ class LinearReg(LinearRegression):
             [numpy array] -- [n_variables X 2^n_variables]
         """
 
-        cond_entropy = computeEnt(X, self.linReg, mseEntropy, unifEntropy, self.cvFold)
+        cond_entropy = computeEnt(X, self.linReg, mseEntropy, ShannonEntropy, self.cvFold)
         return cond_entropy
