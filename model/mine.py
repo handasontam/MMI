@@ -270,7 +270,7 @@ class Mine():
                 self.cond = cond
                 self.fit(X_train, X_test)
                 self.savefig()
-                cond_ent_mine[Resp, sI] = self.forward_pass(X_test).item() + cond_ent_mine[Resp, 0]
+                cond_ent_mine[Resp, sI] = cond_ent_mine[Resp, 0] - self.forward_pass(X_test).item()
 
         self.prefix = prefix_base
         return cond_ent_mine

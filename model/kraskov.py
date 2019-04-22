@@ -51,10 +51,11 @@ class Kraskov():
                         element += 1
                     cond.append(int(element))
                 # self.savefig()
-                cond_ent[Resp, sI] = mutual_info_regression(
+                cond_ent[Resp, sI] = cond_ent[Resp, 0] - 
+                                    mutual_info_regression(
                                     X=X[:, cond], 
                                     y=X[:, Resp], 
                                     discrete_features=self.discrete_features, 
                                     n_neighbors=self.n_neighbors, 
-                                    random_state=self.random_state)[0] + cond_ent[Resp, 0]
+                                    random_state=self.random_state)[0]
         return cond_ent
