@@ -2,6 +2,7 @@
 from model.linear_regression import LinearReg
 from model.mine import Mine
 from model.kraskov import Kraskov
+from model.jackknife import Jackknife
 from data.bimodal import BiModal
 from data.gaussian import Gaussian
 
@@ -38,7 +39,14 @@ model = {
             verbose=False
         ), 
         'color': 'orange'
-    }
+    },
+    'Jackknife': {
+        'model': Jackknife(
+            n_sim = 1
+        ),
+        'color': 'brown'
+    },
+    
 }
 
 n_samples = batch_size * 20
