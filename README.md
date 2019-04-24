@@ -43,7 +43,7 @@ make
 ```bash
 cd ..
 # check the configuration in settings.py
-python -m MMI/main
+python -m MMI.main
 ```
 
 ## How to add new mi estimators
