@@ -9,12 +9,11 @@ from scipy.stats import randint
 import os
 from .utils import save_train_curve
 # from model import Mine, LinearReg, Kraskov
-from datetime import datetime
 from joblib import Parallel, delayed
 from . import settings
 from tqdm import tqdm
 
-def saveResultsFig(results_dict, prefix=""):
+def saveResultsFig(results_dict, experiment_path=""):
     """
     
     Arguments:
@@ -49,11 +48,11 @@ def saveResultsFig(results_dict, prefix=""):
             axes[row_id].set_ylabel('MI')
             axes[row_id].set_title(dataset_name)
             axes[row_id].legend()
-    figName = "{0}MI".format(prefix)
+    figName = "{0}MI".format(experiment_path)
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
-def get_estimation(data_model, data_name, varying_param):
+def get_estimation(data_model, data_name, varying_param, experiment_path):
     """
     Returns: results, example:
                 
@@ -69,20 +68,20 @@ def get_estimation(data_model, data_name, varying_param):
     data = data_model.data
     ground_truth = data_model.ground_truth
 
-    prefix_name_loop = "{0}{1}_{2}={3}/".format(settings.prefix_name, data_model.name, data_model.varName, data_model.varValue)
+    prefix_name_loop = os.path.join(experiment_path, "{}_{}={}/".format(data_model.name, data_model.varName, data_model.varValue))
     if not os.path.exists(prefix_name_loop):
         os.makedirs(prefix_name_loop)
 
     # Fit Algorithm
     for model_name, model in settings.model.items():
-        if 'MINE' == model_name[:4]:
-            prefix_temp = model['model'].prefix
-            model['model'].prefix = "{0}{1}_".format(prefix_name_loop, model['model'].objName)
+        # For plotting extra figure inside the training
+        model['model'].model_name = model_name
+        model['model'].prefix = os.path.join(prefix_name_loop, "{}".format(model_name))
+        os.makedirs(model['model'].prefix)
         mi_estimation = model['model'].predict(data)
-        if 'MINE' == model_name[:4]:
-            model['model'].setVaryingParamInfo(data_model.varName, data_model.varValue, ground_truth)
-            model['model'].savefigAli(data, mi_estimation)
-            model['model'].prefix = prefix_temp
+        model['model'].paramName = data_model.varName
+        model['model'].paramValue = data_model.varValue
+        model['model'].ground_truth = ground_truth
 
         # Save Results
         results[model_name] = mi_estimation
@@ -92,7 +91,7 @@ def get_estimation(data_model, data_name, varying_param):
 
     return results, data_name, varying_param
 
-def plot():
+def plot(experiment_path):
     # Initialize the results dictionary
 
     # results example: 
@@ -108,9 +107,6 @@ def plot():
     #     ...
     # }
 
-    prefix_name = settings.prefix_name
-    if not os.path.exists(prefix_name):
-        os.makedirs(prefix_name)
 
     results = dict()
     results['Ground Truth'] = dict()
@@ -121,18 +117,28 @@ def plot():
             results['Ground Truth'][data_name] = []
     
     # # Main Loop
-    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data['model'](**kwargs), data_name, kwargs[data['varying_param_name']]) 
+    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data['model'](**kwargs), data_name, kwargs[data['varying_param_name']], experiment_path) 
                                                                 for data_name, data in tqdm(settings.data.items())
                                                                 for kwargs in tqdm(data['kwargs']))
     for (aggregate_result, data_name, varying_param) in r:
         for model_name, mi_estimate in aggregate_result.items():
             results[model_name][data_name].append((varying_param, mi_estimate))
     # Plot and save
-    saveResultsFig(results, prefix=prefix_name)
-
+    saveResultsFig(results, experiment_path=experiment_path)
 
     return 0
 
 
 if __name__ == "__main__":
-    plot()
+    # prompt
+    experiment_name = input('Please enter the experiment name: ')
+    experiment_path = os.path.join(settings.output_path, experiment_name)
+    while True:
+        if os.path.exists(experiment_path):
+            experiment_name = input('experiment - \"{}\" already exists! Please reenter the expereiment name: '.format(experiment_name))
+            experiment_path = os.path.join(settings.output_path, experiment_name)
+        else:
+            os.makedirs(experiment_path)
+            print('Output will be saved into {}'.format(experiment_path))
+            break
+    plot(experiment_path)

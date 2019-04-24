@@ -88,7 +88,7 @@ class MineNet(nn.Module):
         return output
 
 class Mine():
-    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True, resp=0, cond=[1], log=True, marginal_mode='shuffle', objName="", ParamName="", ParamValue=np.inf, X_GroundTruth=np.inf, y_label=""):
+    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, verbose=True, resp=0, cond=[1], log=True, marginal_mode='shuffle', y_label=""):
         self.lr = lr
         self.batch_size = batch_size
         self.patience = patience  # 20
@@ -96,16 +96,15 @@ class Mine():
         self.log_freq = int(log_freq)  # int(1e+2)
         self.avg_freq = avg_freq  # int(1e+1)
         self.ma_rate = ma_rate  # 0.01
-        self.prefix = prefix
+        self.prefix = ''
         self.verbose = verbose
         self.resp = resp
         self.cond = cond
         self.log = log
         self.marginal_mode = marginal_mode
-        self.objName = objName
-        self.ParamName = ParamName
-        self.ParamValue = ParamValue
-        self.X_GroundTruth = X_GroundTruth
+        self.model_name = ""
+        self.ground_truth = None
+        self.paramName = None
         if "shuffle"==marginal_mode:
             self.y_label = "I(X^Y)"
         elif "unif"==marginal_mode:
@@ -118,8 +117,8 @@ class Mine():
         self.mine_net_optim = optim.Adam(self.mine_net.parameters(), lr=self.lr)
     
         if self.log:
-            logName = "{0}MINE_train.log".format(self.prefix)
-            log = open(logName, "w")
+            log_file = os.path.join(self.prefix, "MINE_train.log")
+            log = open(log_file, "w")
             log.write("batch_size={0}\n".format(self.batch_size))
             log.write("iter_num={0}\n".format(self.iter_num))
             log.write("log_freq={0}\n".format(self.log_freq))
@@ -171,11 +170,11 @@ class Mine():
         if self.log:
             #Save result to files
             avg_train_mi_lb = np.array(self.avg_train_mi_lb)
-            np.savetxt("{0}avg_train_mi_lb.txt".format(self.prefix), avg_train_mi_lb)
+            np.savetxt(os.path.join(self.prefix, "avg_train_mi_lb.txt"), avg_train_mi_lb)
             avg_valid_mi_lb = np.array(self.avg_valid_mi_lb)
-            np.savetxt("{0}avg_valid_mi_lb.txt".format(self.prefix), avg_valid_mi_lb)
+            np.savetxt(os.path.join(self.prefix, "avg_valid_mi_lb.txt"), avg_valid_mi_lb)
 
-        ch = "{0}checkpoint.pt".format(self.prefix)
+        ch = os.path.join(self.prefix, "checkpoint.pt")
         self.mine_net.load_state_dict(torch.load(ch))#'checkpoint.pt'))
 
     
@@ -232,28 +231,20 @@ class Mine():
         Return:
             mutual information estimate
         """
-        X_train, X_test = train_test_split(
-            X, test_size=0.35, random_state=0)
+        self.X = X
+        X_train, X_test = train_test_split(X, test_size=0.35, random_state=0)
         self.fit(X_train, X_test)
     
-        mi_lb = self.forward_pass(X_test)
-        return mi_lb.item()
-        
-        # joint , marginal = sample_joint_marginal(X, batch_size=X.shape[0], resp=self.resp, cond=self.cond)
-        # joint = torch.autograd.Variable(torch.FloatTensor(joint))
-        # marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        # mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
-        # return -mi_lb
+        mi_lb = self.forward_pass(X_test).item()
+
+        if self.log:
+            self.savefigAli(X, mi_lb)
+        return mi_lb
 
 
     def savefig(self):
-        figName = "{0}trainLog_resp={1}_cond={2}.png".format(self.prefix, self.resp, self.cond)
+        figName = os.path.join(self.prefix, "trainLog_resp={1}_cond={2}.png".format(self.resp, self.cond))
         save_train_curve(self.avg_train_mi_lb, self.avg_valid_mi_lb, figName)
-
-    def setVaryingParamInfo(self, ParamName, ParamValue, X_gt):
-        self.ParamName = ParamName
-        self.ParamValue = ParamValue
-        self.X_GroundTruth = X_gt
 
     def savefigAli(self, X, X_est):
         if len(self.cond) > 1:
@@ -274,34 +265,45 @@ class Mine():
         ax[1].legend()
 
         # Trained Function contour plot
-        delta = 0.025
-        Xmin = -1
-        Xmax = 1
-        x = np.arange(Xmin, Xmax, delta)
-        y = np.arange(Xmin, Xmax, delta)
-        XY = np.array(np.meshgrid(x,y))
+        Xmin = min(X[:,0])
+        Xmax = max(X[:,0])
+        Ymin = min(X[:,1])
+        Ymax = max(X[:,1])
+        x = np.linspace(Xmin, Xmax, 300)
+        y = np.linspace(Ymin, Ymax, 300)
+        xs, ys = np.meshgrid(x,y)
 
 
-        mini_delta = 0.005
-        mini_Xmax = delta/2
-        mini_Xmin = -delta/2
-        mini_x = np.arange(mini_Xmin, mini_Xmax, mini_delta)
-        mini_y = np.arange(mini_Xmin, mini_Xmax, mini_delta)
-        mini_XY = np.array(np.meshgrid(mini_x,mini_y))
-        mini_XY = mini_XY.reshape(mini_XY.shape[0], mini_XY.shape[1]*mini_XY.shape[2]).T
+        # mini_delta = 0.005
+        # mini_Xmax = delta/2
+        # mini_Xmin = -delta/2
+        # mini_x = np.arange(mini_Xmin, mini_Xmax, mini_delta)
+        # mini_y = np.arange(mini_Xmin, mini_Xmax, mini_delta)
+        # mini_XY = np.array(np.meshgrid(mini_x,mini_y))
+        # mini_XY = mini_XY.reshape(mini_XY.shape[0], mini_XY.shape[1]*mini_XY.shape[2]).T
 
-        Z = [self.forward_pass(XY[:,i,j][None, :]+mini_XY).item() for i in range(XY.shape[1])for j in range(XY.shape[2])]
-        Z = np.array(Z).reshape(XY.shape[1], XY.shape[2])
-        CS = ax[2].contour(XY[0,:,:], XY[1,:,:], Z)
-        ax[2].clabel(CS, CS.levels, inline=True, fontsize=10)
+        # Z = [self.mine_net(XY[:,i,j][None, :]+mini_XY).item() for i in range(XY.shape[1]) for j in range(XY.shape[2])]
+        Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]
+        Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
+        # x and y are bounds, so z should be the value *inside* those bounds.
+        # Therefore, remove the last value from the z array.
+        Z = Z[:-1, :-1]
+        z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
+        c = ax[2].pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
+        ax[2].set_title('heatmap')
+        # set the limits of the plot to the limits of the data
+        ax[2].axis([xs.min(), xs.max(), ys.min(), ys.max()])
+        # CS = ax[2].contour(xs, ys, Z)
+        # ax[2].clabel(CS, CS.levels, inline=True, fontsize=10)
+        fig.colorbar(c, ax=ax[2])
 
         # Plot result with ground truth
-        ax[3].scatter(0, self.X_GroundTruth, edgecolors='red', facecolors='none', label='Ground Truth')
-        ax[3].scatter(0, X_est, edgecolors='green', facecolors='none', label="MINE_{0}".format(self.objName))
-        ax[3].set_xlabel(self.ParamName)
+        ax[3].scatter(0, self.ground_truth, edgecolors='red', facecolors='none', label='Ground Truth')
+        ax[3].scatter(0, X_est, edgecolors='green', facecolors='none', label="MINE_{0}".format(self.model_name))
+        ax[3].set_xlabel(self.paramName)
         ax[3].set_ylabel(self.y_label)
         ax[3].legend()
-        figName = "{0}MINE".format(self.prefix)
+        figName = os.path.join(self.prefix, "MINE")
         fig.savefig(figName, bbox_inches='tight')
         plt.close()
         

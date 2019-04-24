@@ -19,11 +19,13 @@ import math
 import os
 from datetime import datetime
 
-cpu = 1
+cpu = 20
 
 batch_size=300
 
-prefix_name = "MMI/Output/main_{0}/".format(datetime.now())
+
+time_now = datetime.now()
+output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experiments")
 
 # ground truth is plotted in red
 model = {
@@ -141,9 +143,7 @@ model = {
             avg_freq=int(10), 
             ma_rate=0.01, 
             verbose=False,
-            prefix=prefix_name,
-            marginal_mode='shuffle',
-            objName='Dir'
+            marginal_mode='shuffle'
         ), 
         'color': 'orange'
     },
@@ -157,9 +157,7 @@ model = {
             avg_freq=int(10), 
             ma_rate=0.01, 
             verbose=False,
-            prefix=prefix_name,
-            marginal_mode='unif',
-            objName='Ent'
+            marginal_mode='unif'
         ), 
         'color': 'purple'
     }
