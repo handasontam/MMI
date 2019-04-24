@@ -1,14 +1,14 @@
 
-from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
 from .DiscreteCondEnt import computeEnt
 from ..utils import mseEntropy, varEntropy, unifEntropy, ShannonEntropy
 
+class cartReg(DecisionTreeRegressor):
 
-class LinearReg(LinearRegression):
-    def __init__(self, cvFold):
+    def __init__(self, cvFold=3):
         super().__init__()
         self.cvFold = cvFold
-        self.linReg = LinearRegression()
+        self.Reg = DecisionTreeRegressor()
 
     def predict(self, X):
         """[summary]
@@ -20,7 +20,7 @@ class LinearReg(LinearRegression):
             mutual information estimate
         """
 
-        cond_entropy = computeEnt(X, self.linReg, mseEntropy, varEntropy, self.cvFold)
+        cond_entropy = computeEnt(X, self.Reg, mseEntropy, varEntropy, self.cvFold)
         mutual_info = cond_entropy[1,0] + cond_entropy[0,0] - cond_entropy[0,1] - cond_entropy[1,1]
         mutual_info = mutual_info/2
         return mutual_info
@@ -35,5 +35,5 @@ class LinearReg(LinearRegression):
             [numpy array] -- [n_variables X 2^n_variables]
         """
 
-        cond_entropy = computeEnt(X, self.linReg, mseEntropy, ShannonEntropy, self.cvFold)
+        cond_entropy = computeEnt(X, self.Reg, mseEntropy, ShannonEntropy, self.cvFold)
         return cond_entropy

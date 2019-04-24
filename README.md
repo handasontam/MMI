@@ -15,10 +15,35 @@
 - matplotlib
 - tqdm
 
+## Dependencies for if-estimators
+- oct2py
+
+## Dependencies for AIC (better install following packages with brew if your machine is Mac)
+- cmake
+- boost
+- python3
+- boost-python3
+## build AIC module
+```bash
+cd MMI/IC
+cmake src/
+# set paths of python3, boost and boost-python3 in CMakeCache.txt
+# and then cmake again
+# until you see "-- Generating done"
+make
+# if successful, you will see
+# Scanning dependencies of target AIC
+# [ 50%] Building CXX object CMakeFiles/AIC.dir/pylib.cpp.o
+# [100%] Linking CXX shared library AIC.so
+# [100%] Built target AIC
+# now AIC is built
+```
+
 ## How to run
 ```bash
+cd ..
 # check the configuration in settings.py
-python main.py
+python -m MMI.main
 ```
 
 ## How to add new mi estimators

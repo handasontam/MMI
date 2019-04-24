@@ -1,5 +1,5 @@
 import numpy as np
-from model import mine
+from .model import mine
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -7,15 +7,15 @@ import matplotlib.pyplot as plt
 import math
 from scipy.stats import randint
 import os
-import data
-from utils import save_train_curve
+from . import data
+from .utils import save_train_curve
 # from model import Mine, LinearReg, Kraskov
 from datetime import datetime
 from joblib import Parallel, delayed
-import settings
+from . import settings
 from tqdm import tqdm
 
-def saveResultsFig(results_dict):
+def saveResultsFig(results_dict, prefix=""):
     """
     
     Arguments:
@@ -50,7 +50,8 @@ def saveResultsFig(results_dict):
             axes[row_id].set_ylabel('MI')
             axes[row_id].set_title(dataset_name)
             axes[row_id].legend()
-    fig.savefig('MI', bbox_inches='tight')
+    figName = "{0}MI".format(prefix)
+    fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
 def get_estimation(data_model, varying_param):
@@ -69,9 +70,19 @@ def get_estimation(data_model, varying_param):
     data = data_model.data
     ground_truth = data_model.ground_truth
 
+    prefix_name_loop = "{0}{1}_{2}={3}/".format(settings.prefix_name, data_model.name, data_model.varName, data_model.varValue)
+    os.mkdir(prefix_name_loop)
+
     # Fit Algorithm
     for model_name, model in settings.model.items():
+        if 'MINE' == model_name[:4]:
+            prefix_temp = model['model'].prefix
+            model['model'].prefix = "{0}{1}_".format(prefix_name_loop, model['model'].objName)
         mi_estimation = model['model'].predict(data)
+        if 'MINE' == model_name[:4]:
+            model['model'].setVaryingParamInfo(data_model.varName, data_model.varValue, ground_truth)
+            model['model'].savefigAli(data, mi_estimation)
+            model['model'].prefix = prefix_temp
 
         # Save Results
         results[model_name] = mi_estimation
@@ -97,6 +108,9 @@ def plot():
     #     ...
     # }
 
+    prefix_name = settings.prefix_name
+    os.mkdir(prefix_name)
+
     results = dict()
     results['Ground Truth'] = dict()
     for model_name in settings.model.keys():
@@ -114,7 +128,7 @@ def plot():
             for model_name, mi_estimate in aggregate_result.items():
                 results[model_name][data_name].append((varying_param, mi_estimate))
     # Plot and save
-    saveResultsFig(results)
+    saveResultsFig(results, prefix=prefix_name)
 
 
     return 0

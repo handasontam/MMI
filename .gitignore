@@ -1,9 +1,14 @@
 *.pt
-__pycache__\*
 __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 *.pyc
 .vscode
-model/deepset.py
 experiments
+*.log
+*.cmake
+*.check_cache
+*.bin
+MMI/IC/CMakeFiles/
+Output/
+octave-workspace
