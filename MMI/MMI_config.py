@@ -24,7 +24,7 @@ batch_size=300
 n_samples = 500
 n_test = 3
 
-prefix_name = "MMI/Output/{0}/".format(datetime.now())
+prefix_name = "MMI/Output/MMI_{0}/".format(datetime.now())
 
 # import numpy as np
 # k = 2
@@ -104,6 +104,8 @@ rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.85, 0.9, 0.95, 0.99, 0.999 ]
 variables = [2]
 widths = list(range(10))
 
+varName = 'numbers of uniform variables'
+
 data = {
     'Uniform': {
         'model': Uniform, 
@@ -112,11 +114,13 @@ data = {
                 'n_samples':n_samples, 
                 'n_variables':var, 
                 'low':0.0, 
-                'high': 1.0
+                'high': 1.0,
+                'varName': varName,
+                'varValue': var
             } for var in variables
         ], 
         'varying_param_name': 'n_variables', 
-        'x_axis_name': 'numbers of uniform variables', 
+        'x_axis_name': varName, 
     }, 
     # {
     #     'name': 'Examples', 
