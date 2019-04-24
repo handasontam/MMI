@@ -10,28 +10,28 @@ from ..MMI.IC.AIC import TableEntropy
 # from .DiscreteCondEnt import subset
 import os
 
-from ..utils import save_train_curve
-# import matplotlib.pyplot as plt
+# from ..utils import save_train_curve
+import matplotlib.pyplot as plt
 
 
-# def save_train_curve(train_loss, valid_loss, figName):
-#     # visualize the loss as the network trained
-#     fig = plt.figure(figsize=(10,8))
-#     plt.plot(range(1,len(train_loss)+1),train_loss, label='Training Loss')
-#     plt.plot(range(1,len(valid_loss)+1),valid_loss,label='Validation Loss')
+def save_train_curve(train_loss, valid_loss, figName):
+    # visualize the loss as the network trained
+    fig = plt.figure(figsize=(10,8))
+    plt.plot(range(1,len(train_loss)+1),train_loss, label='Training Loss')
+    plt.plot(range(1,len(valid_loss)+1),valid_loss,label='Validation Loss')
 
-#     # find position of lowest validation loss
-#     minposs = valid_loss.index(min(valid_loss))+1 
-#     plt.axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
+    # find position of lowest validation loss
+    minposs = valid_loss.index(min(valid_loss))+1 
+    plt.axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
 
-#     plt.xlabel('epochs')
-#     plt.ylabel('loss')
-#     plt.xlim(0, len(train_loss)+1) # consistent scale
-#     plt.grid(True)
-#     plt.legend()
-#     plt.tight_layout()
-#     fig.savefig(figName, bbox_inches='tight')
-#     plt.close()
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.xlim(0, len(train_loss)+1) # consistent scale
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    fig.savefig(figName, bbox_inches='tight')
+    plt.close()
 
 
 def sample_joint_marginal(data, resp=0, cond=[1], batch_size=100, marginal_mode='shuffle'):
@@ -89,7 +89,7 @@ class MineNet(nn.Module):
         return output
 
 class Mine():
-    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True, resp=0, cond=[1], log=True, marginal_mode='shuffle'):
+    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, prefix="", verbose=True, resp=0, cond=[1], log=True, marginal_mode='shuffle', objName="", ParamName="", ParamValue=np.inf, X_GroundTruth=np.inf, y_label=""):
         self.lr = lr
         self.batch_size = batch_size
         self.patience = patience  # 20
@@ -103,6 +103,16 @@ class Mine():
         self.cond = cond
         self.log = log
         self.marginal_mode = marginal_mode
+        self.objName = objName
+        self.ParamName = ParamName
+        self.ParamValue = ParamValue
+        self.X_GroundTruth = X_GroundTruth
+        if "shuffle"==marginal_mode:
+            self.y_label = "I(X^Y)"
+        elif "unif"==marginal_mode:
+            self.y_label = "HXY"
+        else:
+            self.y_label = y_label
 
     def fit(self, train_data, val_data):
         self.mine_net = MineNet(input_size=len(self.cond)+1)
@@ -252,7 +262,7 @@ class Mine():
         numCond = 2**(n_var-1)
         cond_ent_mine = np.zeros((n_var, numCond))
         prefix_base = self.prefix
-        prefix_name = "{0}n_var={1}/mine".format(prefix_base, n_var)
+        prefix_name = "{0}n_var={1}/mine_{2}".format(prefix_base, n_var, self.objName)
         for Resp in range(n_var):
             for sI in range(1, numCond):
                 subset = TableEntropy.subsetVector(n_var - 1, sI)
@@ -279,6 +289,62 @@ class Mine():
     def savefig(self):
         figName = "{0}trainLog_resp={1}_cond={2}.png".format(self.prefix, self.resp, self.cond)
         save_train_curve(self.avg_train_mi_lb, self.avg_valid_mi_lb, figName)
+
+    def setVaryingParamInfo(self, ParamName, ParamValue, X_gt):
+        self.ParamName = ParamName
+        self.ParamValue = ParamValue
+        self.X_GroundTruth = X_gt
+
+    def savefigAli(self, X, X_est):
+        if len(self.cond) > 1:
+            raise ValueError("Only support 2-dim or 1-dim")
+        fig, ax = plt.subplots(1,4, figsize=(90, 15))
+        #plot Data
+        ax[0].scatter(X[:,self.resp], X[:,self.cond], color='red', marker='o')
+
+        #plot training curve
+        ax[1].plot(range(1,len(self.avg_train_mi_lb)+1),self.avg_train_mi_lb, label='Training Loss')
+        ax[1].plot(range(1,len(self.avg_valid_mi_lb)+1),self.avg_valid_mi_lb,label='Validation Loss')
+
+            # find position of lowest validation loss
+        minposs = self.avg_valid_mi_lb.index(min(self.avg_valid_mi_lb))+1 
+        ax[1].axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
+
+        ax[1].grid(True)
+        ax[1].legend()
+
+        # Trained Function contour plot
+        delta = 0.025
+        Xmin = -1
+        Xmax = 1
+        x = np.arange(Xmin, Xmax, delta)
+        y = np.arange(Xmin, Xmax, delta)
+        XY = np.array(np.meshgrid(x,y))
+
+
+        mini_delta = 0.005
+        mini_Xmax = delta/2
+        mini_Xmin = -delta/2
+        mini_x = np.arange(mini_Xmin, mini_Xmax, mini_delta)
+        mini_y = np.arange(mini_Xmin, mini_Xmax, mini_delta)
+        mini_XY = np.array(np.meshgrid(mini_x,mini_y))
+        mini_XY = mini_XY.reshape(mini_XY.shape[0], mini_XY.shape[1]*mini_XY.shape[2]).T
+
+        Z = [self.forward_pass(XY[:,i,j][None, :]+mini_XY).item() for i in range(XY.shape[1])for j in range(XY.shape[2])]
+        Z = np.array(Z).reshape(XY.shape[1], XY.shape[2])
+        CS = ax[2].contour(XY[0,:,:], XY[1,:,:], Z)
+        ax[2].clabel(CS, CS.levels, inline=True, fontsize=10)
+
+        # Plot result with ground truth
+        ax[3].scatter(0, self.X_GroundTruth, edgecolors='red', facecolors='none', label='Ground Truth')
+        ax[3].scatter(0, X_est, edgecolors='green', facecolors='none', label="MINE_{0}".format(self.objName))
+        ax[3].set_xlabel(self.ParamName)
+        ax[3].set_ylabel(self.y_label)
+        ax[3].legend()
+        figName = "{0}MINE".format(self.prefix)
+        fig.savefig(figName, bbox_inches='tight')
+        plt.close()
+        
 
 
 
