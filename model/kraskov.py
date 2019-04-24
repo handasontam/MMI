@@ -1,10 +1,5 @@
 
 from sklearn.feature_selection import mutual_info_regression
-<<<<<<< HEAD
-=======
-from ..MMI.IC.AIC import TableEntropy
-from ..utils import mseEntropy, varEntropy, unifEntropy, ShannonEntropy
->>>>>>> thomas/master
 import numpy as np
 
 class Kraskov():
@@ -28,11 +23,6 @@ class Kraskov():
         
         Arguments:
             X {[np array]} -- [N X 2]
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> thomas/master
         Returns:
             mutual information estimation
         """
@@ -41,12 +31,11 @@ class Kraskov():
                                       y=X[:, 1], 
                                       discrete_features=self.discrete_features, 
                                       n_neighbors=self.n_neighbors, 
-<<<<<<< HEAD
-                                      random_state=self.random_state)[0]
-=======
                                       random_state=self.random_state)[0]
 
     def predict_Cond_Entropy(self, X):
+        from ..MMI.IC.AIC import TableEntropy
+        from ..utils import mseEntropy, varEntropy, unifEntropy, ShannonEntropy
         n_var = X.shape[1]
         numCond = 2**(n_var-1)
         cond_ent = np.zeros((n_var, numCond))
@@ -68,4 +57,3 @@ class Kraskov():
                                     n_neighbors=self.n_neighbors, 
                                     random_state=self.random_state)[0]
         return cond_ent
->>>>>>> thomas/master

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import math
 from scipy.stats import randint
 import os
-from . import data
 from .utils import save_train_curve
 # from model import Mine, LinearReg, Kraskov
 from datetime import datetime
@@ -54,7 +53,7 @@ def saveResultsFig(results_dict, prefix=""):
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
-def get_estimation(data_model, varying_param):
+def get_estimation(data_model, data_name, varying_param):
     """
     Returns: results, example:
                 
@@ -71,7 +70,8 @@ def get_estimation(data_model, varying_param):
     ground_truth = data_model.ground_truth
 
     prefix_name_loop = "{0}{1}_{2}={3}/".format(settings.prefix_name, data_model.name, data_model.varName, data_model.varValue)
-    os.mkdir(prefix_name_loop)
+    if not os.path.exists(prefix_name_loop):
+        os.makedirs(prefix_name_loop)
 
     # Fit Algorithm
     for model_name, model in settings.model.items():
@@ -90,7 +90,7 @@ def get_estimation(data_model, varying_param):
     # Ground Truth
     results['Ground Truth'] = ground_truth
 
-    return results, varying_param
+    return results, data_name, varying_param
 
 def plot():
     # Initialize the results dictionary
@@ -109,7 +109,8 @@ def plot():
     # }
 
     prefix_name = settings.prefix_name
-    os.mkdir(prefix_name)
+    if not os.path.exists(prefix_name):
+        os.makedirs(prefix_name)
 
     results = dict()
     results['Ground Truth'] = dict()
@@ -119,14 +120,13 @@ def plot():
             results[model_name][data_name] = []
             results['Ground Truth'][data_name] = []
     
-    # Main Loop
-    for data_name, data in tqdm(settings.data.items()):
-        data_model = data['model']
-        varying_param_name = data['varying_param_name']
-        r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data_model(**kwargs), kwargs[varying_param_name]) for kwargs in tqdm(data['kwargs']))
-        for (aggregate_result, varying_param) in r:
-            for model_name, mi_estimate in aggregate_result.items():
-                results[model_name][data_name].append((varying_param, mi_estimate))
+    # # Main Loop
+    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data['model'](**kwargs), data_name, kwargs[data['varying_param_name']]) 
+                                                                for data_name, data in tqdm(settings.data.items())
+                                                                for kwargs in tqdm(data['kwargs']))
+    for (aggregate_result, data_name, varying_param) in r:
+        for model_name, mi_estimate in aggregate_result.items():
+            results[model_name][data_name].append((varying_param, mi_estimate))
     # Plot and save
     saveResultsFig(results, prefix=prefix_name)
 

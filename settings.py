@@ -4,13 +4,13 @@ from .model.mine import Mine
 from .model.kraskov import Kraskov
 from .model.cart_regression import cartReg
 
-from .model.ShannonKDE import ShanKDE
-from .model.hellingerDiv import hellingerDiv
-from .model.tsallisDiv import tsallisDiv
-from .model.chiSqDiv import chiSqDiv
-from .model.renyiDiv import renyiDiv
-from .model.klDiv import klDiv
-from .model.condShannonEntropy import condShanEnt
+# from .model.ShannonKDE import ShanKDE
+# from .model.hellingerDiv import hellingerDiv
+# from .model.tsallisDiv import tsallisDiv
+# from .model.chiSqDiv import chiSqDiv
+# from .model.renyiDiv import renyiDiv
+# from .model.klDiv import klDiv
+# from .model.condShannonEntropy import condShanEnt
 
 from .data.bimodal import BiModal
 from .data.gaussian import Gaussian

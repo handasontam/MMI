@@ -1,7 +1,7 @@
 
 from sklearn.linear_model import LogisticRegression
 from .DiscreteCondEnt import computeEnt
-from ..utils import mseEntropy, varEntropy, unifEntropy
+from ..utils import mseEntropy, varEntropy
 
 class LogisticReg(LogisticRegression):
 
@@ -26,6 +26,7 @@ class LogisticReg(LogisticRegression):
         return mutual_info
 
     def predict_Cond_Entropy(self, X):
+        from ..utils import unifEntropy
         """[summary]
         
         Arguments:

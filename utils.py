@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import mean_squared_error
-from .model import ifestimators as ife
 
 def save_train_curve(train_loss, valid_loss, figName):
     # visualize the loss as the network trained
@@ -33,6 +32,7 @@ def unifEntropy(y, high=1.0, low=0.0):
     return np.log(high-low)
 
 def ShannonEntropy(y):
+    from .model import ifestimators as ife
     params = ife.Struct()
     funPara = ife.Struct()
     return ife.octave.shannonEntropy(y, funPara, params)

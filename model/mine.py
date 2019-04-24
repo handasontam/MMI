@@ -6,7 +6,6 @@ import torch.autograd as autograd
 from .pytorchtools import EarlyStopping
 import numpy as np
 from sklearn.model_selection import train_test_split
-from ..MMI.IC.AIC import TableEntropy
 # from .DiscreteCondEnt import subset
 import os
 
@@ -245,45 +244,6 @@ class Mine():
         # marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
         # mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
         # return -mi_lb
-
-
-    def predict_Cond_Entropy(self, X):
-        """[summary]
-        
-        Arguments:
-            X {[numpy array]} -- [N X 2]
-
-        Return:
-            cond_Ent_tablem {[np array]} -- [numVar X numCondset]
-        """
-        X_train, X_test = train_test_split(
-            X, test_size=0.35, random_state=0)
-        n_var = X.shape[1]
-        numCond = 2**(n_var-1)
-        cond_ent_mine = np.zeros((n_var, numCond))
-        prefix_base = self.prefix
-        prefix_name = "{0}n_var={1}/mine_{2}".format(prefix_base, n_var, self.objName)
-        for Resp in range(n_var):
-            for sI in range(1, numCond):
-                subset = TableEntropy.subsetVector(n_var - 1, sI)
-                # subset = subset(n_var - 1, sI)
-                subset = np.array(subset)
-                cond = []
-                for element in subset:
-                    if element >= Resp:
-                        element += 1
-                    cond.append(int(element))
-                prefix_name_loop = "{0}_resp={1}_cond={2}/".format(prefix_name, Resp, cond)
-                os.mkdir(prefix_name_loop)
-                self.prefix = prefix_name_loop
-                self.resp = Resp
-                self.cond = cond
-                self.fit(X_train, X_test)
-                self.savefig()
-                cond_ent_mine[Resp, sI] = cond_ent_mine[Resp, 0] - self.forward_pass(X_test).item()
-
-        self.prefix = prefix_base
-        return cond_ent_mine
 
 
     def savefig(self):
