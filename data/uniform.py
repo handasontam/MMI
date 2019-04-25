@@ -1,35 +1,32 @@
 import numpy as np
-from numpy.random import uniform as unif
+from scipy.special import xlogy
 
-class Uniform():
-    def __init__(self, n_samples, n_variables=3, low=0.0, high=1.0, varName="", varValue=0):
-        self.n_variables = int(n_variables)
-        self.n_samples = int(n_samples)
-        self.low = low
-        self.high = high
-        self.varName = varName
-        self.varValue = varValue
-        self.name = 'uniform'
+class unif():
+    def __init__(self,mix,a,b,N):
+        self.mix, self.a, self.b, self.N = mix, a, b, N
 
     @property
     def data(self):
-        """[summary]
-        
-        Raises:
-            ValueError -- [if number of variable is less than 3, insuffieint to test MMI]
-        
-        Returns:
-            [np array] -- [n_sample by n_variables matrix]
-        """
+        mix, a, b = self.mix, self.a, self.b
+        N1 = int(mix*self.N)
+        temp1 = np.array([[np.random.uniform(-a/2,a/2,N1)], [np.random.uniform(-.5/a,.5/a,N1)]]).T.reshape(N1,2)
+        N2 = self.N-N1
+        temp2 = np.array([[np.random.uniform(-.5/b,.5/b,N2)], [np.random.uniform(-.5*b,.5*b,N2)]]).T.reshape(N2,2)
+        return np.append(temp1,temp2,axis = 0) 
 
-        if self.n_variables < 2 or self.n_samples < 1:
-            raise ValueError
-        else:
-            x = unif(self.low, self.high, self.n_samples*(self.n_variables-1)).reshape(self.n_samples, self.n_variables-1)
-            x = np.append(x, np.remainder(np.sum(x, axis=1),1)[:,None],axis=1)
-            return x
-            
     @property
     def ground_truth(self):
-        return np.log(self.high-self.low)
+        mix, a, b = self.mix, self.a, self.b
+        temp1 = -(1-a*b)*(mix*np.log(a) + (1-mix)*np.log(b))
+        temp2 = -xlogy(mix+(1-mix)*a*b, mix/a+(1-mix)*b)
+        temp3 = -xlogy(mix*a*b+(1-mix), mix*a+(1-mix)/b)
+        mi = temp1+temp2+temp3
+        hXY = -(1-a*b)*(xlogy(mix,mix) + xlogy(1-mix,1-mix))
+        return [mi, hXY]
 
+
+if __name__ == '__main__':
+    x=unif(0.5, 20, 2, 200).data
+    import matplotlib.pyplot as plt
+    plt.scatter(x[:,0], x[:,1])
+    plt.show()

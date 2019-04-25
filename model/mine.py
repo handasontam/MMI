@@ -238,15 +238,10 @@ class Mine():
         mi_lb = self.forward_pass(X_test).item()
 
         if self.log:
-            self.savefigAli(X, mi_lb)
+            self.savefig(X, mi_lb)
         return mi_lb
 
-
-    def savefig(self):
-        figName = os.path.join(self.prefix, "trainLog_resp={1}_cond={2}.png".format(self.resp, self.cond))
-        save_train_curve(self.avg_train_mi_lb, self.avg_valid_mi_lb, figName)
-
-    def savefigAli(self, X, X_est):
+    def savefig(self, X, ml_lb_estimate):
         if len(self.cond) > 1:
             raise ValueError("Only support 2-dim or 1-dim")
         fig, ax = plt.subplots(1,4, figsize=(90, 15))
@@ -273,17 +268,7 @@ class Mine():
         y = np.linspace(Ymin, Ymax, 300)
         xs, ys = np.meshgrid(x,y)
 
-
-        # mini_delta = 0.005
-        # mini_Xmax = delta/2
-        # mini_Xmin = -delta/2
-        # mini_x = np.arange(mini_Xmin, mini_Xmax, mini_delta)
-        # mini_y = np.arange(mini_Xmin, mini_Xmax, mini_delta)
-        # mini_XY = np.array(np.meshgrid(mini_x,mini_y))
-        # mini_XY = mini_XY.reshape(mini_XY.shape[0], mini_XY.shape[1]*mini_XY.shape[2]).T
-
-        # Z = [self.mine_net(XY[:,i,j][None, :]+mini_XY).item() for i in range(XY.shape[1]) for j in range(XY.shape[2])]
-        Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]
+        Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]  # TODO: should vectorize this operation
         Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
         # x and y are bounds, so z should be the value *inside* those bounds.
         # Therefore, remove the last value from the z array.
@@ -299,7 +284,7 @@ class Mine():
 
         # Plot result with ground truth
         ax[3].scatter(0, self.ground_truth, edgecolors='red', facecolors='none', label='Ground Truth')
-        ax[3].scatter(0, X_est, edgecolors='green', facecolors='none', label="MINE_{0}".format(self.model_name))
+        ax[3].scatter(0, ml_lb_estimate, edgecolors='green', facecolors='none', label="MINE_{0}".format(self.model_name))
         ax[3].set_xlabel(self.paramName)
         ax[3].set_ylabel(self.y_label)
         ax[3].legend()

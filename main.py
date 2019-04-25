@@ -48,7 +48,7 @@ def saveResultsFig(results_dict, experiment_path=""):
             axes[row_id].set_ylabel('MI')
             axes[row_id].set_title(dataset_name)
             axes[row_id].legend()
-    figName = "{0}MI".format(experiment_path)
+    figName = os.path.join("MI", experiment_path)
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
@@ -76,7 +76,7 @@ def get_estimation(data_model, data_name, varying_param, experiment_path):
     for model_name, model in settings.model.items():
         # For plotting extra figure inside the training
         model['model'].model_name = model_name
-        model['model'].prefix = os.path.join(prefix_name_loop, "{}".format(model_name))
+        model['model'].prefix = os.path.join(prefix_name_loop, model_name)
         os.makedirs(model['model'].prefix)
         mi_estimation = model['model'].predict(data)
         model['model'].paramName = data_model.varName
