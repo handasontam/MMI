@@ -1,6 +1,7 @@
 # import model
 from .model.linear_regression import LinearReg
 from .model.mine import Mine
+from .model.mine_entropy import Mine_ent
 from .model.kraskov import Kraskov
 from .model.cart_regression import cartReg
 
@@ -34,20 +35,20 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experime
 
 # ground truth is plotted in red
 model = {
-    'Linear Regression': {  # model name, for plotting the legend
-        'model': LinearReg(  # initialize the object
-            cvFold=3
-        ), 
-        'color': 'blue'  # for plotting
-    }, 
-    'Kraskov': {
-        'model': Kraskov(
-            discrete_features='auto', 
-            n_neighbors=3, 
-            random_state=None
-        ), 
-        'color': 'green'
-    }, 
+    # 'Linear Regression': {  # model name, for plotting the legend
+    #     'model': LinearReg(  # initialize the object
+    #         cvFold=3
+    #     ), 
+    #     'color': 'blue'  # for plotting
+    # }, 
+    # 'Kraskov': {
+    #     'model': Kraskov(
+    #         discrete_features='auto', 
+    #         n_neighbors=3, 
+    #         random_state=None
+    #     ), 
+    #     'color': 'green'
+    # }, 
     # 'LOO Shannon KDE': {
     #     'model': ShanKDE(
     #         numPart='loo', 
@@ -153,7 +154,7 @@ model = {
         'color': 'orange'
     },
     'MINE_entropy': {
-        'model': Mine(
+        'model': Mine_ent(
             lr=lr,  
             batch_size=batch_size, 
             patience=patience,
@@ -162,7 +163,6 @@ model = {
             avg_freq=int(10), 
             ma_rate=moving_average_rate, 
             verbose=False,
-            sample_mode='unif'
         ), 
         'color': 'purple'
     }
