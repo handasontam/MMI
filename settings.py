@@ -35,20 +35,20 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experime
 
 # ground truth is plotted in red
 model = {
-    # 'Linear Regression': {  # model name, for plotting the legend
-    #     'model': LinearReg(  # initialize the object
-    #         cvFold=3
-    #     ), 
-    #     'color': 'blue'  # for plotting
-    # }, 
-    # 'Kraskov': {
-    #     'model': Kraskov(
-    #         discrete_features='auto', 
-    #         n_neighbors=3, 
-    #         random_state=None
-    #     ), 
-    #     'color': 'green'
-    # }, 
+     'Linear Regression': {  # model name, for plotting the legend
+         'model': LinearReg(  # initialize the object
+             cvFold=3
+         ), 
+         'color': 'blue'  # for plotting
+     }, 
+     'Kraskov': {
+         'model': Kraskov(
+             discrete_features='auto', 
+             n_neighbors=3, 
+             random_state=None
+         ), 
+         'color': 'green'
+     }, 
     # 'LOO Shannon KDE': {
     #     'model': ShanKDE(
     #         numPart='loo', 
