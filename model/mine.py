@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 import os
 
 # from ..utils import save_train_curve
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 

@@ -30,20 +30,20 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experime
 
 # ground truth is plotted in red
 model = {
-    # 'Linear Regression': {  # model name, for plotting the legend
-    #     'model': LinearReg(  # initialize the object
-    #         cvFold=3
-    #     ), 
-    #     'color': 'blue'  # for plotting
-    # }, 
-    # 'Kraskov': {
-    #     'model': Kraskov(
-    #         discrete_features='auto', 
-    #         n_neighbors=3, 
-    #         random_state=None
-    #     ), 
-    #     'color': 'green'
-    # }, 
+     'Linear Regression': {  # model name, for plotting the legend
+         'model': LinearReg(  # initialize the object
+             cvFold=3
+         ), 
+         'color': 'blue'  # for plotting
+     }, 
+     'Kraskov': {
+         'model': Kraskov(
+             discrete_features='auto', 
+             n_neighbors=3, 
+             random_state=None
+         ), 
+         'color': 'green'
+     }, 
     # 'LOO Shannon KDE': {
     #     'model': ShanKDE(
     #         numPart='loo', 
@@ -128,26 +128,26 @@ model = {
     #     ), 
     #     'color': 'pink'
     # }, 
-    # 'Cart Reg': {
-    #     'model': cartReg(
-    #         cvFold=3
-    #     ), 
-    #     'color': 'pink'
-    # },
-    # 'MINE_direct': {
-    #     'model': Mine(
-    #         lr=1e-4, 
-    #         batch_size=batch_size, 
-    #         patience=int(20), 
-    #         iter_num=int(2e+3), 
-    #         log_freq=int(100), 
-    #         avg_freq=int(10), 
-    #         ma_rate=0.01, 
-    #         verbose=False,
-    #         marginal_mode='shuffle'
-    #     ), 
-    #     'color': 'orange'
-    # },
+     'Cart Reg': {
+         'model': cartReg(
+             cvFold=3
+         ), 
+         'color': 'pink'
+     },
+     'MINE_direct': {
+         'model': Mine(
+             lr=1e-4, 
+             batch_size=batch_size, 
+             patience=int(20), 
+             iter_num=int(2e+3), 
+             log_freq=int(100), 
+             avg_freq=int(10), 
+             ma_rate=0.01, 
+             verbose=False,
+             marginal_mode='shuffle'
+         ), 
+         'color': 'orange'
+     },
     'MINE_entropy': {
         'model': Mine_ent(
             lr=1e-3, 
@@ -164,8 +164,8 @@ model = {
 }
 
 n_samples = batch_size * 20
-# rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 0.999 ]
-rhos = [0.8]
+rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 0.999 ]
+#rhos = [0.8]
 variables = [3, 4, 5, 6, 7]
 widths = list(range(10))
 
