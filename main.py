@@ -38,16 +38,20 @@ def saveResultsFig(results_dict, experiment_path=""):
 
     fig, axes = plt.subplots(nrows=n_datasets, ncols=1, figsize=(12,8))
 
-    for column_id, (model_name, dataset_results) in enumerate(results_dict.items()):
+    for _, (model_name, dataset_results) in enumerate(results_dict.items()):
         for row_id, (dataset_name, results) in enumerate(dataset_results.items()):
             color = settings.model[model_name]['color']
             xs = [x for x, y in results]
             ys = [y for x, y in results]
-            axes[row_id].scatter(xs, ys, edgecolors=color, facecolors='none', label=model_name)
-            axes[row_id].set_xlabel(settings.data[dataset_name]['varying_param_name'])
-            axes[row_id].set_ylabel('MI')
-            axes[row_id].set_title(dataset_name)
-            axes[row_id].legend()
+            if n_datasets > 1:
+                axe = axes[row_id]
+            else:
+                axe = axes
+            axe.scatter(xs, ys, edgecolors=color, facecolors='none', label=model_name)
+            axe.set_xlabel(settings.data[dataset_name]['varying_param_name'])
+            axe.set_ylabel('MI')
+            axe.set_title(dataset_name)
+            axe.legend()
     figName = os.path.join("MI", experiment_path)
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
@@ -78,10 +82,10 @@ def get_estimation(data_model, data_name, varying_param, experiment_path):
         model['model'].model_name = model_name
         model['model'].prefix = os.path.join(prefix_name_loop, model_name)
         os.makedirs(model['model'].prefix)
-        mi_estimation = model['model'].predict(data)
         model['model'].paramName = data_model.varName
         model['model'].paramValue = data_model.varValue
         model['model'].ground_truth = ground_truth
+        mi_estimation = model['model'].predict(data)
 
         # Save Results
         results[model_name] = mi_estimation

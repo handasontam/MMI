@@ -239,7 +239,71 @@ class Mine():
 
         if self.log:
             self.savefig(X, mi_lb)
+        if 'unif' == self.marginal_mode:
+            if 0 == len(self.cond):
+                X_max, X_min = X[:,self.resp].max(axis=0), X[:,self.resp].min(axis=0)
+                cross = np.log(X_max-X_min)
+            else:
+                X_max, X_min = X.max(axis=0), X.min(axis=0)
+                cross = sum(np.log(X_max-X_min))
+            return cross - mi_lb
         return mi_lb
+
+    def getTrainCurve(self, ax):
+        ax.plot(range(1,len(self.avg_train_mi_lb)+1),self.avg_train_mi_lb, label='Training Loss')
+        ax.plot(range(1,len(self.avg_valid_mi_lb)+1),self.avg_valid_mi_lb,label='Validation Loss')
+        # find position of lowest validation loss
+        minposs = self.avg_valid_mi_lb.index(min(self.avg_valid_mi_lb))+1 
+        ax.axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
+        ax.grid(True)
+        ax.legend()
+        return ax
+
+    def getHeatMap(self, ax, xs, ys, Z=None, sampleNum=0):
+        """
+        For 2-dimension MINE only
+        """
+        HXY = None
+        if np.ndarray != type(Z):
+            Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]
+            Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
+            if sampleNum > 0:
+                m_R = abs(xs[1,1] - xs[0,0])/2
+                m_x = np.linspace(-m_R, m_R, sampleNum)
+                m_y = np.linspace(-m_R, m_R, sampleNum)
+                m_xy = np.array(np.meshgrid(m_x, m_y))
+                m_xy = m_xy.reshape(m_xy.shape[0],m_xy.shape[1]*m_xy.shape[2]).T
+                XY = np.array((xs, ys))
+                HXY = [self.forward_pass(XY[:,i,j][None,:]+m_xy).item() for i in range(XY.shape[1]-1) for j in range(XY.shape[2]-1)]
+                HXY = np.array(HXY).reshape(XY.shape[1]-1, XY.shape[2]-1)
+            # x and y are bounds, so z should be the value *inside* those bounds.
+            # Therefore, remove the last value from the z array.
+            Z = Z[:-1, :-1]
+
+        z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
+        c = ax.pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
+        # set the limits of the plot to the limits of the data
+        ax.axis([xs.min(), xs.max(), ys.min(), ys.max()])
+        return ax, HXY, c
+
+    def getResultPlot(self, ax, xs, Z=None, sampleNum=0):
+        """
+        For 1-dimension MINE only
+        """
+        HX = None
+        if np.ndarray != Z:
+            Z = [self.mine_net(torch.FloatTensor([xs[i]])).item()  for i in range(xs.shape[0])]
+            Z = np.array(Z)
+            if sampleNum > 0:
+                m_R = abs(xs[1] - xs[0])/2
+                m_x = np.linspace(-m_R, m_R, sampleNum)
+                HX = [self.forward_pass(np.broadcast_to((xs[i]+m_x)[:,None],(m_x.shape[0],2))).item() for i in range(xs.shape[0]) ]
+                HX = np.array(HX)
+        z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
+        ax.plot(xs, Z, 'ro-')
+        # set the limits of the plot to the limits of the data
+        ax.axis([xs.min(), xs.max(),z_min, z_max])
+        return ax, HX
 
     def savefig(self, X, ml_lb_estimate):
         if len(self.cond) > 1:
@@ -249,15 +313,16 @@ class Mine():
         ax[0].scatter(X[:,self.resp], X[:,self.cond], color='red', marker='o')
 
         #plot training curve
-        ax[1].plot(range(1,len(self.avg_train_mi_lb)+1),self.avg_train_mi_lb, label='Training Loss')
-        ax[1].plot(range(1,len(self.avg_valid_mi_lb)+1),self.avg_valid_mi_lb,label='Validation Loss')
+        ax[1] = self.getTrainCurve(ax[1])
+        # ax[1].plot(range(1,len(self.avg_train_mi_lb)+1),self.avg_train_mi_lb, label='Training Loss')
+        # ax[1].plot(range(1,len(self.avg_valid_mi_lb)+1),self.avg_valid_mi_lb,label='Validation Loss')
 
-            # find position of lowest validation loss
-        minposs = self.avg_valid_mi_lb.index(min(self.avg_valid_mi_lb))+1 
-        ax[1].axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
+        #     # find position of lowest validation loss
+        # minposs = self.avg_valid_mi_lb.index(min(self.avg_valid_mi_lb))+1 
+        # ax[1].axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
 
-        ax[1].grid(True)
-        ax[1].legend()
+        # ax[1].grid(True)
+        # ax[1].legend()
 
         # Trained Function contour plot
         Xmin = min(X[:,0])
@@ -267,20 +332,21 @@ class Mine():
         x = np.linspace(Xmin, Xmax, 300)
         y = np.linspace(Ymin, Ymax, 300)
         xs, ys = np.meshgrid(x,y)
+        ax[2], Z, c = self.getHeatMap(ax[2], xs, ys)
 
-        Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]  # TODO: should vectorize this operation
-        Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
-        # x and y are bounds, so z should be the value *inside* those bounds.
-        # Therefore, remove the last value from the z array.
-        Z = Z[:-1, :-1]
-        z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
-        c = ax[2].pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
-        ax[2].set_title('heatmap')
-        # set the limits of the plot to the limits of the data
-        ax[2].axis([xs.min(), xs.max(), ys.min(), ys.max()])
-        # CS = ax[2].contour(xs, ys, Z)
-        # ax[2].clabel(CS, CS.levels, inline=True, fontsize=10)
+        # Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]  # TODO: should vectorize this operation
+        # Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
+        # # x and y are bounds, so z should be the value *inside* those bounds.
+        # # Therefore, remove the last value from the z array.
+        # Z = Z[:-1, :-1]
+        # z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
+        # c = ax[2].pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
+        # # set the limits of the plot to the limits of the data
+        # ax[2].axis([xs.min(), xs.max(), ys.min(), ys.max()])
+        # # CS = ax[2].contour(xs, ys, Z)
+        # # ax[2].clabel(CS, CS.levels, inline=True, fontsize=10)
         fig.colorbar(c, ax=ax[2])
+        ax[2].set_title('heatmap')
 
         # Plot result with ground truth
         ax[3].scatter(0, self.ground_truth, edgecolors='red', facecolors='none', label='Ground Truth')
