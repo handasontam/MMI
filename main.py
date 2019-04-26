@@ -143,7 +143,7 @@ if __name__ == "__main__":
     experiment_path = os.path.join(settings.output_path, experiment_name)
     while True:
         if os.path.exists(experiment_path):
-            experiment_name = input('experiment - \"{}\" already exists! Please reenter the expereiment name: '.format(experiment_name))
+            experiment_name = input('experiment - \"{}\" already exists! Please re-enter the experiment name: '.format(experiment_name))
             experiment_path = os.path.join(settings.output_path, experiment_name)
         else:
             os.makedirs(experiment_path)

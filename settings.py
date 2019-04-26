@@ -23,9 +23,9 @@ from datetime import datetime
 
 cpu = 20
 
-batch_size=300
+batch_size=256
 patience=int(250)
-iter_num=int(1e+4)
+iter_num=int(1e+9)
 lr = 1e-3
 moving_average_rate = 0.01
 

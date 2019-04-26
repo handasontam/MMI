@@ -358,7 +358,7 @@ class Mine():
 
         # Plot result with ground truth
         ax[3].scatter(0, self.ground_truth, edgecolors='red', facecolors='none', label='Ground Truth')
-        ax[3].scatter(0, ml_lb_estimate, edgecolors='green', facecolors='none', label="MINE_{0}".format(self.model_name))
+        ax[3].scatter(0, ml_lb_estimate, edgecolors='green', facecolors='none', label=self.model_name)
         ax[3].set_xlabel(self.paramName)
         ax[3].set_ylabel(self.y_label)
         ax[3].legend()
