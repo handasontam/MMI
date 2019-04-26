@@ -14,6 +14,7 @@ from .model.cart_regression import cartReg
 
 from .data.bimodal import BiModal
 from .data.gaussian import Gaussian
+from .data.uniform_mmi import UniformMMI
 from .data.uniform import Uniform
 import math
 import os
@@ -22,6 +23,10 @@ from datetime import datetime
 cpu = 20
 
 batch_size=300
+patience=int(250)
+iter_num=int(1e+4)
+lr = 1e-3
+moving_average_rate = 0.01
 
 
 time_now = datetime.now()
@@ -135,29 +140,29 @@ model = {
     },
     'MINE_direct': {
         'model': Mine(
-            lr=1e-4, 
+            lr=lr, 
             batch_size=batch_size, 
-            patience=int(20), 
-            iter_num=int(2e+3), 
+            patience=patience, 
+            iter_num=iter_num, 
             log_freq=int(100), 
             avg_freq=int(10), 
-            ma_rate=0.01, 
+            ma_rate=moving_average_rate, 
             verbose=False,
-            marginal_mode='shuffle'
+            sample_mode='marginal'
         ), 
         'color': 'orange'
     },
     'MINE_entropy': {
         'model': Mine(
-            lr=1e-3, 
+            lr=lr,  
             batch_size=batch_size, 
-            patience=int(20), 
-            iter_num=int(2e+4), 
+            patience=patience,
+            iter_num=iter_num, 
             log_freq=int(100), 
             avg_freq=int(10), 
-            ma_rate=0.01, 
+            ma_rate=moving_average_rate, 
             verbose=False,
-            marginal_mode='unif'
+            sample_mode='unif'
         ), 
         'color': 'purple'
     }
@@ -165,10 +170,8 @@ model = {
 
 n_samples = batch_size * 20
 rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 0.999 ]
-variables = [3, 4, 5, 6, 7]
-widths = list(range(10))
+widths = list(range(2, 12, 2))
 
-varName = 'correlation'
 
 data = {
     'BiModal': {
@@ -180,8 +183,6 @@ data = {
                 'mean2':0, 
                 'rho1': rho, 
                 'rho2': -rho,
-                'varName': varName,
-                'varValue': rho
             } for rho in rhos
         ], 
         'varying_param_name': 'rho1', # the parameter name which denotes the x-axis of the plot
@@ -195,13 +196,24 @@ data = {
                 'mean1':0, 
                 'mean2':0, 
                 'rho': rho,
-                'varName': varName,
-                'varValue': rho
             } for rho in rhos
         ], 
         'varying_param_name': 'rho', 
-        'x_axis_name': varName, 
+        'x_axis_name': 'correlation', 
     },
+    'Uniform': {
+        'model': Uniform, 
+        'kwargs': [
+            {
+                'n_samples':n_samples, 
+                'width_a': width, 
+                'width_b': width, 
+                'mix': 0.5
+            } for width in widths
+        ], 
+        'varying_param_name': 'width_a', 
+        'x_axis_name': 'width'
+    }, 
     # {
     #     'name': 'Examples', 
     #     'model': XX(

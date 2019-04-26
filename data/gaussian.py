@@ -1,15 +1,11 @@
 import numpy as np
 
 class Gaussian():
-    def __init__(self, n_samples, mean1, mean2, rho, varName="", varValue=0):
+    def __init__(self, n_samples, mean1, mean2, rho, varValue=0):
         self.n_samples = n_samples
         self.mean1 = mean1
         self.mean2 = mean2
         self.rho = rho
-        self.varName = varName
-        self.varValue = varValue
-        self.name = 'gaussian'
-
 
     @property
     def data(self):

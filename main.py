@@ -52,7 +52,7 @@ def saveResultsFig(results_dict, experiment_path=""):
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
-def get_estimation(data_model, data_name, varying_param, experiment_path):
+def get_estimation(data_model, data_name, varying_param_name, varying_param_value, experiment_path):
     """
     Returns: results, example:
                 
@@ -68,7 +68,7 @@ def get_estimation(data_model, data_name, varying_param, experiment_path):
     data = data_model.data
     ground_truth = data_model.ground_truth
 
-    prefix_name_loop = os.path.join(experiment_path, "{}_{}={}/".format(data_model.name, data_model.varName, data_model.varValue))
+    prefix_name_loop = os.path.join(experiment_path, "{}_{}={}/".format(data_name, varying_param_name, varying_param_value))
     if not os.path.exists(prefix_name_loop):
         os.makedirs(prefix_name_loop)
 
@@ -79,8 +79,8 @@ def get_estimation(data_model, data_name, varying_param, experiment_path):
         model['model'].prefix = os.path.join(prefix_name_loop, model_name)
         os.makedirs(model['model'].prefix)
         mi_estimation = model['model'].predict(data)
-        model['model'].paramName = data_model.varName
-        model['model'].paramValue = data_model.varValue
+        model['model'].paramName = varying_param_name
+        model['model'].paramValue = varying_param_value
         model['model'].ground_truth = ground_truth
 
         # Save Results
@@ -89,7 +89,7 @@ def get_estimation(data_model, data_name, varying_param, experiment_path):
     # Ground Truth
     results['Ground Truth'] = ground_truth
 
-    return results, data_name, varying_param
+    return results, data_name, varying_param_value
 
 def plot(experiment_path):
     # Initialize the results dictionary
@@ -117,12 +117,16 @@ def plot(experiment_path):
             results['Ground Truth'][data_name] = []
     
     # # Main Loop
-    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data['model'](**kwargs), data_name, kwargs[data['varying_param_name']], experiment_path) 
-                                                                for data_name, data in tqdm(settings.data.items())
-                                                                for kwargs in tqdm(data['kwargs']))
-    for (aggregate_result, data_name, varying_param) in r:
+    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data['model'](**kwargs), 
+                                                              data_name, 
+                                                              data['varying_param_name'], 
+                                                              kwargs[data['varying_param_name']], 
+                                                              experiment_path) 
+                                                                    for data_name, data in tqdm(settings.data.items())
+                                                                    for kwargs in tqdm(data['kwargs']))
+    for (aggregate_result, data_name, varying_param_value) in r:
         for model_name, mi_estimate in aggregate_result.items():
-            results[model_name][data_name].append((varying_param, mi_estimate))
+            results[model_name][data_name].append((varying_param_value, mi_estimate))
     # Plot and save
     saveResultsFig(results, experiment_path=experiment_path)
 
@@ -140,5 +144,10 @@ if __name__ == "__main__":
         else:
             os.makedirs(experiment_path)
             print('Output will be saved into {}'.format(experiment_path))
+            # save the settings
+            from shutil import copyfile
+            mmi_dir_path = os.path.dirname(os.path.abspath(__file__))
+            settings_path = os.path.join(mmi_dir_path, 'settings.py')
+            copyfile(settings_path, os.path.join(experiment_path, 'settings.py'))
             break
     plot(experiment_path)

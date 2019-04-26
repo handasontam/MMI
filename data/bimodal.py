@@ -11,16 +11,13 @@ class BiModal():
     # Mode[0] separation between the two bivariate gaussians along the x-axis and Mode[1] is the separation along the y-axis
     #
     # Adapated from Ali
-    def __init__(self, n_samples=400, mean1=0, mean2=0, rho1=0.9, rho2=-0.9, mix=0.5, varName="", varValue=0):
+    def __init__(self, n_samples=400, mean1=0, mean2=0, rho1=0.9, rho2=-0.9, mix=0.5):
         self.n_samples = n_samples
         self.mean1 = mean1
         self.mean2 = mean2
         self.rho1 = rho1
         self.rho2 = rho2
         self.mix = mix
-        self.varName = varName
-        self.varValue = varValue
-        self.name = 'bimodal'
 
     @property
     def data(self):

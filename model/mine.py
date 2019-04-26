@@ -33,7 +33,7 @@ def save_train_curve(train_loss, valid_loss, figName):
     plt.close()
 
 
-def sample_joint_marginal(data, resp=0, cond=[1], batch_size=100, marginal_mode='shuffle'):
+def sample_batch(data, resp=0, cond=[1], batch_size=100, sample_mode='marginal'):
     """[summary]
     
     Arguments:
@@ -49,23 +49,26 @@ def sample_joint_marginal(data, resp=0, cond=[1], batch_size=100, marginal_mode=
         [batch_joint] -- [batch size X 2]
         [batch_mar] -- [batch size X 2]
     """
-    index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
-    batch_joint = data[index]
     if type(cond)==list:
         whole = cond.copy()
         whole.append(resp)
-        batch_joint = batch_joint[:, whole]
     else:
         raise TypeError("cond should be list")
-    if 'unif' == marginal_mode:
+    if sample_mode == 'joint':
+        index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
+        batch = data[index]
+        batch = batch[:, whole]
+    elif sample_mode == 'unif':
         dataMax = data.max(axis=0)[whole]
         dataMin = data.min(axis=0)[whole]
-        batch_mar = (dataMax - dataMin)*np.random.random((batch_size,len(cond)+1)) + dataMin
-    else:
+        batch = (dataMax - dataMin)*np.random.random((batch_size,len(cond)+1)) + dataMin
+    elif sample_mode == 'marginal':
         joint_index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
         marginal_index = np.random.choice(range(data.shape[0]), size=batch_size, replace=False)
-        batch_mar = np.concatenate([data[joint_index][:,resp].reshape(-1,1), data[marginal_index][:,cond].reshape(-1,len(cond))], axis=1)
-    return batch_joint, batch_mar
+        batch = np.concatenate([data[joint_index][:,resp].reshape(-1,1), data[marginal_index][:,cond].reshape(-1,len(cond))], axis=1)
+    else:
+        raise ValueError('Sample mode: {} not recognized.'.format(sample_mode))
+    return batch
 
 
 class MineNet(nn.Module):
@@ -88,7 +91,7 @@ class MineNet(nn.Module):
         return output
 
 class Mine():
-    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, verbose=True, resp=0, cond=[1], log=True, marginal_mode='shuffle', y_label=""):
+    def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, verbose=True, resp=0, cond=[1], log=True, sample_mode='marginal', y_label=""):
         self.lr = lr
         self.batch_size = batch_size
         self.patience = patience  # 20
@@ -101,13 +104,13 @@ class Mine():
         self.resp = resp
         self.cond = cond
         self.log = log
-        self.marginal_mode = marginal_mode
+        self.sample_mode = sample_mode 
         self.model_name = ""
         self.ground_truth = None
         self.paramName = None
-        if "shuffle"==marginal_mode:
+        if sample_mode == "marginal":
             self.y_label = "I(X^Y)"
-        elif "unif"==marginal_mode:
+        elif sample_mode == "unif":
             self.y_label = "HXY"
         else:
             self.y_label = y_label
@@ -138,7 +141,8 @@ class Mine():
         earlyStop = EarlyStopping(patience=self.patience, verbose=self.verbose, prefix=self.prefix)
         for i in range(self.iter_num):
             #get train data
-            batchTrain = sample_joint_marginal(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, marginal_mode=self.marginal_mode)
+            batchTrain = sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode='joint'), \
+                         sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode=self.sample_mode)
             mi_lb, ma_et, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim, ma_et)
             result.append(mi_lb.detach().cpu().numpy())
             train_mi_lb.append(mi_lb.item())
@@ -196,7 +200,7 @@ class Mine():
         joint , marginal = batch
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
         marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
+        mi_lb , t, et = self.mutual_information(joint, marginal)
         ma_et = (1-ma_rate)*ma_et + ma_rate*torch.mean(et)
         
         # unbiasing use moving average
@@ -209,17 +213,18 @@ class Mine():
         mine_net_optim.step()
         return mi_lb, ma_et, lossTrain
     
-    def mutual_information(self, joint, marginal, mine_net):
+    def mutual_information(self, joint, marginal):
         t = self.mine_net(joint)
         et = torch.exp(self.mine_net(marginal))
         mi_lb = torch.mean(t) - torch.log(torch.mean(et))
         return mi_lb, t, et
 
     def forward_pass(self, X):
-        joint , marginal = sample_joint_marginal(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], marginal_mode=self.marginal_mode)
+        joint = sample_batch(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], sample_mode='joint')
+        marginal = sample_batch(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], sample_mode=self.sample_mode)
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
         marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        mi_lb , t, et = self.mutual_information(joint, marginal, self.mine_net)
+        mi_lb , t, et = self.mutual_information(joint, marginal)
         return mi_lb
 
     def predict(self, X):
