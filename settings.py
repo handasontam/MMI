@@ -1,12 +1,12 @@
 # import model
-from .model.linear_regression import LinearReg
-from .model.mine import Mine
-from .model.mine_entropy import Mine_ent
-from .model.kraskov import Kraskov
-from .model.cart_regression import cartReg
+# from .model.linear_regression import LinearReg
+# from .model.mine import Mine
+# from .model.mine_entropy import Mine_ent
+# from .model.kraskov import Kraskov
+# from .model.cart_regression import cartReg
 
-# from .model.ShannonKDE import ShanKDE
-# from .model.hellingerDiv import hellingerDiv
+from .model.ShannonKDE import ShanKDE
+from .model.hellingerDiv import hellingerDiv
 # from .model.tsallisDiv import tsallisDiv
 # from .model.chiSqDiv import chiSqDiv
 # from .model.renyiDiv import renyiDiv
@@ -21,7 +21,7 @@ import math
 import os
 from datetime import datetime
 
-cpu = 20
+cpu = 1
 
 batch_size=256
 patience=int(250)
@@ -35,44 +35,44 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experime
 
 # ground truth is plotted in red
 model = {
-     'Linear Regression': {  # model name, for plotting the legend
-         'model': LinearReg(  # initialize the object
-             cvFold=3
-         ), 
-         'color': 'blue'  # for plotting
-     }, 
-     'Kraskov': {
-         'model': Kraskov(
-             discrete_features='auto', 
-             n_neighbors=3, 
-             random_state=None
-         ), 
-         'color': 'green'
-     }, 
-    # 'LOO Shannon KDE': {
-    #     'model': ShanKDE(
-    #         numPart='loo', 
-    #         numAvgPart=1, 
-    #         correctBound=False, 
-    #         Low=1e-5, 
-    #         Upp=math.inf, 
-    #         doAsympAnalysis=False,
-    #         alpha=0.5
-    #     ), 
-    #     'color': 'magenta'
-    # },
-    # 'LOO hellingerDiv': {
-    #     'model': hellingerDiv(
-    #         numPart='loo', 
-    #         numAvgPart=1, 
-    #         correctBound=False, 
-    #         Low=1e-5, 
-    #         Upp=math.inf, 
-    #         doAsympAnalysis=False,
-    #         alpha=0.5
-    #     ), 
-    #     'color': 'cyan'
-    # }, 
+    #  'Linear Regression': {  # model name, for plotting the legend
+    #      'model': LinearReg(  # initialize the object
+    #          cvFold=3
+    #      ), 
+    #      'color': 'blue'  # for plotting
+    #  }, 
+    #  'Kraskov': {
+    #      'model': Kraskov(
+    #          discrete_features='auto', 
+    #          n_neighbors=3, 
+    #          random_state=None
+    #      ), 
+    #      'color': 'green'
+    #  }, 
+    'LOO Shannon KDE': {
+        'model': ShanKDE(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
+        ), 
+        'color': 'magenta'
+    },
+    'LOO hellingerDiv': {
+        'model': hellingerDiv(
+            numPart='loo', 
+            numAvgPart=1, 
+            correctBound=False, 
+            Low=1e-5, 
+            Upp=math.inf, 
+            doAsympAnalysis=False,
+            alpha=0.5
+        ), 
+        'color': 'cyan'
+    }, 
     # 'LOO tsallisDiv': {
     #     'model': tsallisDiv(
     #         numPart='loo', 
@@ -133,39 +133,39 @@ model = {
     #     ), 
     #     'color': 'pink'
     # }, 
-    'Cart Reg': {
-        'model': cartReg(
-            cvFold=3
-        ), 
-        'color': 'pink'
-    },
-    'MINE_direct': {
-        'model': Mine(
-            lr=lr, 
-            batch_size=batch_size, 
-            patience=patience, 
-            iter_num=iter_num, 
-            log_freq=int(100), 
-            avg_freq=int(10), 
-            ma_rate=moving_average_rate, 
-            verbose=False,
-            sample_mode='marginal'
-        ), 
-        'color': 'orange'
-    },
-    'MINE_entropy': {
-        'model': Mine_ent(
-            lr=lr,  
-            batch_size=batch_size, 
-            patience=patience,
-            iter_num=iter_num, 
-            log_freq=int(100), 
-            avg_freq=int(10), 
-            ma_rate=moving_average_rate, 
-            verbose=False,
-        ), 
-        'color': 'purple'
-    }
+    # 'Cart Reg': {
+    #     'model': cartReg(
+    #         cvFold=3
+    #     ), 
+    #     'color': 'pink'
+    # },
+    # 'MINE_direct': {
+    #     'model': Mine(
+    #         lr=lr, 
+    #         batch_size=batch_size, 
+    #         patience=patience, 
+    #         iter_num=iter_num, 
+    #         log_freq=int(100), 
+    #         avg_freq=int(10), 
+    #         ma_rate=moving_average_rate, 
+    #         verbose=False,
+    #         sample_mode='marginal'
+    #     ), 
+    #     'color': 'orange'
+    # },
+    # 'MINE_entropy': {
+    #     'model': Mine_ent(
+    #         lr=lr,  
+    #         batch_size=batch_size, 
+    #         patience=patience,
+    #         iter_num=iter_num, 
+    #         log_freq=int(100), 
+    #         avg_freq=int(10), 
+    #         ma_rate=moving_average_rate, 
+    #         verbose=False,
+    #     ), 
+    #     'color': 'purple'
+    # }
 }
 
 n_samples = batch_size * 20
