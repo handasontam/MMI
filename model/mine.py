@@ -266,52 +266,36 @@ class Mine():
         ax.legend()
         return ax
 
-    def getHeatMap(self, ax, xs, ys, Z=None, sampleNum=0):
+    def getHeatMap(self, ax, xs, ys, Z=None):
         """
         For 2-dimension MINE only
         """
         
-        HXY = None
         if np.ndarray != type(Z):
-            Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]
-            Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
-            if sampleNum > 0:
-                m_R = abs(xs[1,1] - xs[0,0])/2
-                m_x = np.linspace(-m_R, m_R, sampleNum)
-                m_y = np.linspace(-m_R, m_R, sampleNum)
-                m_xy = np.array(np.meshgrid(m_x, m_y))
-                m_xy = m_xy.reshape(m_xy.shape[0],m_xy.shape[1]*m_xy.shape[2]).T
-                XY = np.array((xs, ys))
-                HXY = [self.forward_pass(XY[:,i,j][None,:]+m_xy).item() for i in range(XY.shape[1]-1) for j in range(XY.shape[2]-1)]
-                HXY = np.array(HXY).reshape(XY.shape[1]-1, XY.shape[2]-1)
+            T = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]
+            T = np.array(T).reshape(xs.shape[1], ys.shape[0])
             # x and y are bounds, so z should be the value *inside* those bounds.
             # Therefore, remove the last value from the z array.
-            Z = Z[:-1, :-1]
+            Z = T[:-1, :-1]
 
         z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
         c = ax.pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
         # set the limits of the plot to the limits of the data
         ax.axis([xs.min(), xs.max(), ys.min(), ys.max()])
-        return ax, HXY, c
+        return ax, Z, c
 
-    def getResultPlot(self, ax, xs, Z=None, sampleNum=0):
+    def getResultPlot(self, ax, xs, Z=None):
         """
         For 1-dimension MINE only
         """
-        HX = None
         if np.ndarray != Z:
-            Z = [self.mine_net(torch.FloatTensor([xs[i]])).item()  for i in range(xs.shape[0])]
-            Z = np.array(Z)
-            if sampleNum > 0:
-                m_R = abs(xs[1] - xs[0])/2
-                m_x = np.linspace(-m_R, m_R, sampleNum)
-                HX = [self.forward_pass(np.broadcast_to((xs[i]+m_x)[:,None],(m_x.shape[0],2))).item() for i in range(xs.shape[0]) ]
-                HX = np.array(HX)
+            T = [self.mine_net(torch.FloatTensor([xs[i]])).item()  for i in range(xs.shape[0])]
+            Z = np.array(T)
         z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
         ax.plot(xs, Z, 'ro-')
         # set the limits of the plot to the limits of the data
         ax.axis([xs.min(), xs.max(),z_min, z_max])
-        return ax, HX
+        return ax, Z
 
     def savefig(self, X, ml_lb_estimate):
         if len(self.cond) > 1:
