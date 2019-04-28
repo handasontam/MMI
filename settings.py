@@ -4,6 +4,7 @@ from .model.mine import Mine
 from .model.mine_entropy import Mine_ent
 from .model.kraskov import Kraskov
 from .model.cart_regression import cartReg
+# from .model.jackknife import Jackknife
 
 # from .model.ShannonKDE import ShanKDE
 # from .model.hellingerDiv import hellingerDiv
@@ -166,7 +167,13 @@ model = {
             verbose=False,
         ), 
         'color': 'purple'
-    }
+    },
+    # 'Jackknife': {
+    #     'model': Jackknife(
+    #         n_sim=5
+    #     ),
+    #     'color': 'brown'
+    # }
 }
 
 n_samples = batch_size * 20
