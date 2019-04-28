@@ -194,7 +194,7 @@ class Mine():
         if self.log:
             writer = animation.writers['ffmpeg'](fps=1, bitrate=1800)
             heatmap_animation = animation.ArtistAnimation(heatmap_animation_fig, self.heatmap_frames, interval=200, blit=False)
-            heatmap_animation.save('heatmap.mp4', writer=writer)
+            heatmap_animation.save(os.path.join(self.prefix, 'heatmap.mp4'), writer=writer)
             #Save result to files
             avg_train_mi_lb = np.array(self.avg_train_mi_lb)
             np.savetxt(os.path.join(self.prefix, "avg_train_mi_lb.txt"), avg_train_mi_lb)
