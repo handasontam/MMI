@@ -39,7 +39,7 @@ class BiModal():
                                     cov=self.covMat2,
                                     size = N2)
         X = np.append(temp1,temp2,axis = 0) 
-        X = np.random.shuffle(X)
+        np.random.shuffle(X)
         return X
 
     @property

@@ -1,4 +1,3 @@
-import model
 from .model.linear_regression import LinearReg
 from .model.mine import Mine
 from .model.mine_entropy import Mine_ent
@@ -22,7 +21,7 @@ import math
 import os
 from datetime import datetime
 
-cpu = 1
+cpu = 20
 
 batch_size=256
 patience=int(250)
