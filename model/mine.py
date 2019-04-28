@@ -8,11 +8,13 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 # from .DiscreteCondEnt import subset
 import os
+from ..util import plot_util
 
 # from ..utils import save_train_curve
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 def save_train_curve(train_loss, valid_loss, figName):
@@ -116,8 +118,13 @@ class Mine():
             self.y_label = "HXY"
         else:
             self.y_label = y_label
+        self.heatmap_frames = []  # for plotting heatmap animation
 
     def fit(self, train_data, val_data):
+        self.Xmin = min(train_data[:,0])
+        self.Xmax = max(train_data[:,0])
+        self.Ymin = min(train_data[:,1])
+        self.Ymax = max(train_data[:,1])
         self.mine_net = MineNet(input_size=len(self.cond)+1)
         self.mine_net_optim = optim.Adam(self.mine_net.parameters(), lr=self.lr)
     
@@ -130,9 +137,10 @@ class Mine():
             log.write("avg_freq={0}\n".format(self.avg_freq))
             log.write("patience={0}\n".format(self.patience))
             log.close()
+            heatmap_animation_fig, heatmap_animation_ax = plt.subplots(1, 1)
         # data is x or y
         result = list()
-        ma_et = 1.
+        self.ma_et = 1.  # exponential of mi estimation on marginal data
         
         #Early Stopping
         train_mi_lb = []
@@ -145,7 +153,7 @@ class Mine():
             #get train data
             batchTrain = sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode='joint'), \
                          sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode=self.sample_mode)
-            mi_lb, ma_et, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim, ma_et)
+            mi_lb, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim)
             result.append(mi_lb.detach().cpu().numpy())
             train_mi_lb.append(mi_lb.item())
             if self.verbose and (i+1)%(self.log_freq)==0:
@@ -172,8 +180,21 @@ class Mine():
                     if self.verbose:
                         print("Early stopping")
                     break
-        
+                if self.log:
+                    x = np.linspace(self.Xmin, self.Xmax, 300)
+                    y = np.linspace(self.Ymin, self.Ymax, 300)
+                    xs, ys = np.meshgrid(x,y)
+                    def ixy(x, y):
+                        t = self.mine_net(torch.FloatTensor(np.hstack((x,y)))).detach().numpy()
+                        ixy = t - np.log(self.ma_et.mean().detach().numpy())
+                        return ixy
+                    heatmap_animation_ax, c = plot_util.getHeatMap(heatmap_animation_ax, xs, ys, ixy)
+                    self.heatmap_frames.append((c,))
+    
         if self.log:
+            writer = animation.writers['ffmpeg'](fps=1, bitrate=1800)
+            heatmap_animation = animation.ArtistAnimation(heatmap_animation_fig, self.heatmap_frames, interval=200, blit=False)
+            heatmap_animation.save('heatmap.mp4', writer=writer)
             #Save result to files
             avg_train_mi_lb = np.array(self.avg_train_mi_lb)
             np.savetxt(os.path.join(self.prefix, "avg_train_mi_lb.txt"), avg_train_mi_lb)
@@ -184,17 +205,15 @@ class Mine():
         self.mine_net.load_state_dict(torch.load(ch))#'checkpoint.pt'))
 
     
-    def update_mine_net(self, batch, mine_net_optim, ma_et, ma_rate=0.01):
+    def update_mine_net(self, batch, mine_net_optim, ma_rate=0.01):
         """[summary]
         
         Arguments:
             batch {[type]} -- ([batch_size X 2], [batch_size X 2])
             mine_net_optim {[type]} -- [description]
-            ma_et {[float]} -- [exponential of mi estimation on marginal data]
             ma_rate {float} -- [moving average rate] (default: {0.01})
         
         Keyword Arguments:
-            ma_et {float} -- [exponential of mi estimation on marginal data]
             mi_lb {} -- []
         """
 
@@ -203,17 +222,18 @@ class Mine():
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
         marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
         mi_lb , t, et = self.mutual_information(joint, marginal)
-        ma_et = (1-ma_rate)*ma_et + ma_rate*torch.mean(et)
+        self.ma_et = (1-ma_rate)*self.ma_et + ma_rate*torch.mean(et)
         
         # unbiasing use moving average
-        loss = -(torch.mean(t) - (1/ma_et.mean()).detach()*torch.mean(et))
+        loss = -(torch.mean(t) - (1/self.ma_et.mean()).detach()*torch.mean(et))
         # use biased estimator
     #     loss = - mi_lb
         lossTrain = loss
         mine_net_optim.zero_grad()
         autograd.backward(loss)
         mine_net_optim.step()
-        return mi_lb, ma_et, lossTrain
+        return mi_lb, lossTrain
+
     
     def mutual_information(self, joint, marginal):
         t = self.mine_net(joint)
@@ -266,34 +286,6 @@ class Mine():
         ax.legend()
         return ax
 
-    def getHeatMap(self, ax, xs, ys, Z=None, sampleNum=0):
-        """
-        For 2-dimension MINE only
-        """
-        
-        HXY = None
-        if np.ndarray != type(Z):
-            Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]
-            Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
-            if sampleNum > 0:
-                m_R = abs(xs[1,1] - xs[0,0])/2
-                m_x = np.linspace(-m_R, m_R, sampleNum)
-                m_y = np.linspace(-m_R, m_R, sampleNum)
-                m_xy = np.array(np.meshgrid(m_x, m_y))
-                m_xy = m_xy.reshape(m_xy.shape[0],m_xy.shape[1]*m_xy.shape[2]).T
-                XY = np.array((xs, ys))
-                HXY = [self.forward_pass(XY[:,i,j][None,:]+m_xy).item() for i in range(XY.shape[1]-1) for j in range(XY.shape[2]-1)]
-                HXY = np.array(HXY).reshape(XY.shape[1]-1, XY.shape[2]-1)
-            # x and y are bounds, so z should be the value *inside* those bounds.
-            # Therefore, remove the last value from the z array.
-            Z = Z[:-1, :-1]
-
-        z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
-        c = ax.pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
-        # set the limits of the plot to the limits of the data
-        ax.axis([xs.min(), xs.max(), ys.min(), ys.max()])
-        return ax, HXY, c
-
     def getResultPlot(self, ax, xs, Z=None, sampleNum=0):
         """
         For 1-dimension MINE only
@@ -322,15 +314,6 @@ class Mine():
 
         #plot training curve
         ax[1] = self.getTrainCurve(ax[1])
-        # ax[1].plot(range(1,len(self.avg_train_mi_lb)+1),self.avg_train_mi_lb, label='Training Loss')
-        # ax[1].plot(range(1,len(self.avg_valid_mi_lb)+1),self.avg_valid_mi_lb,label='Validation Loss')
-
-        #     # find position of lowest validation loss
-        # minposs = self.avg_valid_mi_lb.index(min(self.avg_valid_mi_lb))+1 
-        # ax[1].axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
-
-        # ax[1].grid(True)
-        # ax[1].legend()
 
         # Trained Function contour plot
         Xmin = min(X[:,0])
@@ -340,19 +323,10 @@ class Mine():
         x = np.linspace(Xmin, Xmax, 300)
         y = np.linspace(Ymin, Ymax, 300)
         xs, ys = np.meshgrid(x,y)
-        ax[2], Z, c = self.getHeatMap(ax[2], xs, ys)
+        def t(xs, ys):
+            return self.mine_net(torch.FloatTensor(np.hstack((xs,ys)))).detach().numpy()
+        ax[2], c = plot_util.getHeatMap(ax[2], xs, ys, t)
 
-        # Z = [self.mine_net(torch.FloatTensor([[xs[i,j], ys[i,j]]])).item() for j in range(ys.shape[0]) for i in range(xs.shape[1])]  # TODO: should vectorize this operation
-        # Z = np.array(Z).reshape(xs.shape[1], ys.shape[0])
-        # # x and y are bounds, so z should be the value *inside* those bounds.
-        # # Therefore, remove the last value from the z array.
-        # Z = Z[:-1, :-1]
-        # z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
-        # c = ax[2].pcolormesh(xs, ys, Z, cmap='RdBu', vmin=z_min, vmax=z_max)
-        # # set the limits of the plot to the limits of the data
-        # ax[2].axis([xs.min(), xs.max(), ys.min(), ys.max()])
-        # # CS = ax[2].contour(xs, ys, Z)
-        # # ax[2].clabel(CS, CS.levels, inline=True, fontsize=10)
         fig.colorbar(c, ax=ax[2])
         ax[2].set_title('heatmap')
 

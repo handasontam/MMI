@@ -21,7 +21,7 @@ import math
 import os
 from datetime import datetime
 
-cpu = 20
+cpu = 2
 
 batch_size=256
 patience=int(250)
@@ -35,20 +35,20 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experime
 
 # ground truth is plotted in red
 model = {
-     'Linear Regression': {  # model name, for plotting the legend
-         'model': LinearReg(  # initialize the object
-             cvFold=3
-         ), 
-         'color': 'blue'  # for plotting
-     }, 
-     'Kraskov': {
-         'model': Kraskov(
-             discrete_features='auto', 
-             n_neighbors=3, 
-             random_state=None
-         ), 
-         'color': 'green'
-     }, 
+    #  'Linear Regression': {  # model name, for plotting the legend
+    #      'model': LinearReg(  # initialize the object
+    #          cvFold=3
+    #      ), 
+    #      'color': 'blue'  # for plotting
+    #  }, 
+    #  'Kraskov': {
+    #      'model': Kraskov(
+    #          discrete_features='auto', 
+    #          n_neighbors=3, 
+    #          random_state=None
+    #      ), 
+    #      'color': 'green'
+    #  }, 
     # 'LOO Shannon KDE': {
     #     'model': ShanKDE(
     #         numPart='loo', 
@@ -133,12 +133,12 @@ model = {
     #     ), 
     #     'color': 'pink'
     # }, 
-    'Cart Reg': {
-        'model': cartReg(
-            cvFold=3
-        ), 
-        'color': 'pink'
-    },
+    # 'Cart Reg': {
+    #     'model': cartReg(
+    #         cvFold=3
+    #     ), 
+    #     'color': 'pink'
+    # },
     'MINE_direct': {
         'model': Mine(
             lr=lr, 
@@ -149,27 +149,29 @@ model = {
             avg_freq=int(10), 
             ma_rate=moving_average_rate, 
             verbose=False,
+            log=True,
             sample_mode='marginal'
         ), 
         'color': 'orange'
     },
-    'MINE_entropy': {
-        'model': Mine_ent(
-            lr=lr,  
-            batch_size=batch_size, 
-            patience=patience,
-            iter_num=iter_num, 
-            log_freq=int(100), 
-            avg_freq=int(10), 
-            ma_rate=moving_average_rate, 
-            verbose=False,
-        ), 
-        'color': 'purple'
-    }
+    # 'MINE_entropy': {
+    #     'model': Mine_ent(
+    #         lr=lr,  
+    #         batch_size=batch_size, 
+    #         patience=patience,
+    #         iter_num=iter_num, 
+    #         log_freq=int(100), 
+    #         avg_freq=int(10), 
+    #         ma_rate=moving_average_rate, 
+    #         verbose=False,
+    #     ), 
+    #     'color': 'purple'
+    # }
 }
 
 n_samples = batch_size * 20
-rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 0.999 ]
+# rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 0.999 ]
+rhos = [0.999]
 widths = list(range(2, 12, 2))
 
 
@@ -188,32 +190,32 @@ data = {
         'varying_param_name': 'rho1', # the parameter name which denotes the x-axis of the plot
         'x_axis_name': 'correlation', 
     }, 
-    'Gaussian': {
-        'model': Gaussian, 
-        'kwargs': [
-            {
-                'n_samples':n_samples, 
-                'mean1':0, 
-                'mean2':0, 
-                'rho': rho,
-            } for rho in rhos
-        ], 
-        'varying_param_name': 'rho', 
-        'x_axis_name': 'correlation', 
-    },
-    'Uniform': {
-        'model': Uniform, 
-        'kwargs': [
-            {
-                'n_samples':n_samples, 
-                'width_a': width, 
-                'width_b': width, 
-                'mix': 0.5
-            } for width in widths
-        ], 
-        'varying_param_name': 'width_a', 
-        'x_axis_name': 'width'
-    }, 
+    # 'Gaussian': {
+    #     'model': Gaussian, 
+    #     'kwargs': [
+    #         {
+    #             'n_samples':n_samples, 
+    #             'mean1':0, 
+    #             'mean2':0, 
+    #             'rho': rho,
+    #         } for rho in rhos
+    #     ], 
+    #     'varying_param_name': 'rho', 
+    #     'x_axis_name': 'correlation', 
+    # },
+    # 'Uniform': {
+    #     'model': Uniform, 
+    #     'kwargs': [
+    #         {
+    #             'n_samples':n_samples, 
+    #             'width_a': width, 
+    #             'width_b': width, 
+    #             'mix': 0.5
+    #         } for width in widths
+    #     ], 
+    #     'varying_param_name': 'width_a', 
+    #     'x_axis_name': 'width'
+    # }, 
     # {
     #     'name': 'Examples', 
     #     'model': XX(
