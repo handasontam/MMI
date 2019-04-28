@@ -1,6 +1,5 @@
 import numpy as np
 from .model import mine
-import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -75,6 +74,23 @@ def get_estimation(data_model, data_name, varying_param_name, varying_param_valu
     prefix_name_loop = os.path.join(experiment_path, "{}_{}={}/".format(data_name, varying_param_name, varying_param_value))
     if not os.path.exists(prefix_name_loop):
         os.makedirs(prefix_name_loop)
+        
+    #Plot Ground Truth MI
+    fig, ax = plt.subplots(figsize=(15, 15))
+    Xmax = max(data[:,0])
+    Xmin = min(data[:,0])
+    Ymax = max(data[:,1])
+    Ymin = min(data[:,1])
+    x = np.linspace(Xmin, Xmax, 300)
+    y = np.linspace(Ymin, Ymax, 300)
+    xs, ys = np.meshgrid(x,y)
+    ax, c = data_model.plot_i(ax, xs, ys)
+    fig.colorbar(c, ax=ax)
+    ax.set_title("i(X;Y)")
+    figName = os.path.join(prefix_name_loop, "i_XY")
+    fig.savefig(figName, bbox_inches='tight')
+    plt.close()
+
 
     # Fit Algorithm
     for model_name, model in settings.model.items():

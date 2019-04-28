@@ -47,8 +47,8 @@ class Mine_ent(Mine):
     def savefig(self, X, ml_lb_estimate):
         if len(self.cond) > 1:
             raise ValueError("Only support 2-dim or 1-dim")
-        fig, ax = plt.subplots(3,4, figsize=(100, 45))
-        # fig, ax = plt.subplots(3,3, figsize=(60, 90))
+        # fig, ax = plt.subplots(3,4, figsize=(100, 45))
+        fig, ax = plt.subplots(3,3, figsize=(60, 90))
         #plot Data
         axCur = ax[0,0]
         axCur.scatter(X[:,self.resp], X[:,self.cond], color='red', marker='o')
@@ -75,35 +75,35 @@ class Mine_ent(Mine):
         xs, ys = np.meshgrid(x,y)
 
         axCur = ax[0,2]
-        axCur, HXY, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys, sampleNum=5)
+        axCur, HXY, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys)
         fig.colorbar(c, ax=axCur)
         axCur.set_title('heatmap T(X,Y)')
 
-        axCur = ax[0,3]
-        axCur, _, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys, Z=HXY)
-        fig.colorbar(c, ax=axCur)
-        axCur.set_title('heatmap H(X,Y)')
+        # axCur = ax[0,3]
+        # axCur, _, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys, Z=HXY)
+        # fig.colorbar(c, ax=axCur)
+        # axCur.set_title('heatmap H(X,Y)')
 
         axCur = ax[1,2]
-        axCur, HX = self.Mine_resp.getResultPlot(axCur, x, sampleNum=5)
+        axCur, HX = self.Mine_resp.getResultPlot(axCur, x)
         axCur.set_title('plot of T(X)')
 
-        axCur = ax[1,3]
-        axCur, _ = self.Mine_resp.getResultPlot(axCur, x, Z=HX)
-        axCur.set_title('plot of H(X)')
+        # axCur = ax[1,3]
+        # axCur, _ = self.Mine_resp.getResultPlot(axCur, x, Z=HX)
+        # axCur.set_title('plot of H(X)')
 
         axCur = ax[2,2]
-        axCur, HY = self.Mine_cond.getResultPlot(axCur, y, sampleNum=5)
+        axCur, HY = self.Mine_cond.getResultPlot(axCur, y)
         axCur.set_title('plot of T(Y)')
 
-        axCur = ax[2,3]
-        axCur, _ = self.Mine_resp.getResultPlot(axCur, y, Z=HY)
-        axCur.set_title('plot of H(Y)')
+        # axCur = ax[2,3]
+        # axCur, _ = self.Mine_resp.getResultPlot(axCur, y, Z=HY)
+        # axCur.set_title('plot of H(Y)')
 
         axCur = ax[1,0]
         HX = HX[:-1]
         HY = HY[:-1]
-        MI_XY = [HX[i]+HY[j]-HXY[i,j] for i in range(HX.shape[0]) for j in range(HY.shape[0])]
+        MI_XY = [HXY[i,j]-HX[i]-HY[j] for i in range(HX.shape[0]) for j in range(HY.shape[0])]
         MI_XY = np.array(MI_XY).reshape(HX.shape[0], HY.shape[0])
         axCur, _, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys, MI_XY)
         fig.colorbar(c, ax=axCur)

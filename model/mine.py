@@ -290,20 +290,14 @@ class Mine():
         """
         For 1-dimension MINE only
         """
-        HX = None
         if np.ndarray != Z:
-            Z = [self.mine_net(torch.FloatTensor([xs[i]])).item()  for i in range(xs.shape[0])]
-            Z = np.array(Z)
-            if sampleNum > 0:
-                m_R = abs(xs[1] - xs[0])/2
-                m_x = np.linspace(-m_R, m_R, sampleNum)
-                HX = [self.forward_pass(np.broadcast_to((xs[i]+m_x)[:,None],(m_x.shape[0],2))).item() for i in range(xs.shape[0]) ]
-                HX = np.array(HX)
+            T = [self.mine_net(torch.FloatTensor([xs[i]])).item()  for i in range(xs.shape[0])]
+            Z = np.array(T)
         z_min, z_max = -np.abs(Z).max(), np.abs(Z).max()
         ax.plot(xs, Z, 'ro-')
         # set the limits of the plot to the limits of the data
         ax.axis([xs.min(), xs.max(),z_min, z_max])
-        return ax, HX
+        return ax, Z
 
     def savefig(self, X, ml_lb_estimate):
         if len(self.cond) > 1:

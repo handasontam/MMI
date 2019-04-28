@@ -16,7 +16,12 @@
 - tqdm
 
 ## Dependencies for if-estimators
-- oct2py
+- matlab (tested with 2018b)
+```bash
+#find 
+cd <matlabroot>/extern/engines/python
+python setup.py install
+```
 
 ## How to run
 ```bash

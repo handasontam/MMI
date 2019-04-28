@@ -1,5 +1,6 @@
 
 from . import ifestimators as ife
+import matlab
 import numpy as np
 import math
 
@@ -8,8 +9,10 @@ import math
 class klDiv:
 
     def __init__(self, numPart=1, numAvgPart=1, correctBound=False, Low=1e-5, Upp=math.inf, doAsympAnalysis=False, alpha=0.5):
-        self.params = ife.Struct()
-        self.funPara = ife.Struct()
+        # self.params = ife.Struct()
+        # self.funPara = ife.Struct()
+        self.params = dict()
+        self.funPara = dict()
         self.params['numPartitions'] = numPart
         self.params['numAvgPartitions'] = numAvgPart
         self.params['doBoundaryCorrection'] = correctBound
@@ -28,4 +31,6 @@ class klDiv:
             mutual information estimate
         """
 
-        return ife.octave.klDivergence(X[:,0], X[:,1], self.funPara, self.params)
+        X0 = matlab.double(X[:,0][:,None].tolist())
+        X1 = matlab.double(X[:,1][:,None].tolist())
+        return ife.octave.klDivergence(X0, X1, self.funPara, self.params)
