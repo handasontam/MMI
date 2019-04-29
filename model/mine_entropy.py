@@ -3,6 +3,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import torch
+from ..util import plot_util
 
 from .mine import Mine, MineNet, sample_batch
 
@@ -56,13 +58,13 @@ class Mine_ent(Mine):
 
         #plot training curve
         axCur = ax[0,1]
-        axCur = super(Mine_ent, self).getTrainCurve(axCur)
+        axCur = plot_util.getTrainCurve(self.avg_train_mi_lb, self.avg_valid_mi_lb, axCur)
         axCur.set_title('train curve of HXY')
         axCur = ax[1,1]
-        axCur = self.Mine_resp.getTrainCurve(axCur)
+        axCur = plot_util.getTrainCurve(self.Mine_resp.avg_train_mi_lb, self.Mine_resp.avg_valid_mi_lb, axCur)
         axCur.set_title('train curve of HX')
         axCur = ax[2,1]
-        axCur = self.Mine_cond.getTrainCurve(axCur)
+        axCur = plot_util.getTrainCurve(self.Mine_cond.avg_train_mi_lb, self.Mine_cond.avg_valid_mi_lb, axCur)
         axCur.set_title('train curve of HXY')
 
         # Trained Function contour plot
@@ -73,9 +75,10 @@ class Mine_ent(Mine):
         x = np.linspace(Xmin, Xmax, 300)
         y = np.linspace(Ymin, Ymax, 300)
         xs, ys = np.meshgrid(x,y)
+        fxy = self.mine_net(torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))).detach().numpy().reshape(xs.shape[1], ys.shape[0])
 
         axCur = ax[0,2]
-        axCur, HXY, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys)
+        axCur, c = plot_util.getHeatMap(axCur, xs, ys, fxy)
         fig.colorbar(c, ax=axCur)
         axCur.set_title('heatmap T(X,Y)')
 
@@ -85,7 +88,8 @@ class Mine_ent(Mine):
         # axCur.set_title('heatmap H(X,Y)')
 
         axCur = ax[1,2]
-        axCur, HX = self.Mine_resp.getResultPlot(axCur, x)
+        fx = self.Mine_resp.mine_net(torch.FloatTensor(x[:,None])).detach().numpy().flatten()
+        axCur = plot_util.getResultPlot(axCur, x, fx)
         axCur.set_title('plot of T(X)')
 
         # axCur = ax[1,3]
@@ -93,21 +97,21 @@ class Mine_ent(Mine):
         # axCur.set_title('plot of H(X)')
 
         axCur = ax[2,2]
-        axCur, HY = self.Mine_cond.getResultPlot(axCur, y)
+        fy = self.Mine_cond.mine_net(torch.FloatTensor(y[:,None])).detach().numpy().flatten()
+        axCur = plot_util.getResultPlot(axCur, y, fy)
         axCur.set_title('plot of T(Y)')
 
         # axCur = ax[2,3]
         # axCur, _ = self.Mine_resp.getResultPlot(axCur, y, Z=HY)
         # axCur.set_title('plot of H(Y)')
-
         axCur = ax[1,0]
-        HX = HX[:-1]
-        HY = HY[:-1]
-        MI_XY = [HXY[i,j]-HX[i]-HY[j] for i in range(HX.shape[0]) for j in range(HY.shape[0])]
-        MI_XY = np.array(MI_XY).reshape(HX.shape[0], HY.shape[0])
-        axCur, _, c = super(Mine_ent, self).getHeatMap(axCur, xs, ys, MI_XY)
+        fx = fx[:-1]
+        fy = fy[:-1]
+        i_xy = [fxy[i,j]-fx[i]-fy[j] for i in range(fx.shape[0]) for j in range(fy.shape[0])]
+        i_xy = np.array(i_xy).reshape(fx.shape[0], fy.shape[0])
+        axCur, c = plot_util.getHeatMap(axCur, xs, ys, i_xy)
         fig.colorbar(c, ax=axCur)
-        axCur.set_title('heatmap of MI_XY')
+        axCur.set_title('heatmap of i_xy')
 
 
         # Plot result with ground truth

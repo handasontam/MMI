@@ -9,32 +9,13 @@ from sklearn.model_selection import train_test_split
 # from .DiscreteCondEnt import subset
 import os
 from ..util import plot_util
+from ..util import torch_util
 
 # from ..utils import save_train_curve
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-
-
-def save_train_curve(train_loss, valid_loss, figName):
-    # visualize the loss as the network trained
-    fig = plt.figure(figsize=(10,8))
-    plt.plot(range(1,len(train_loss)+1),train_loss, label='Training Loss')
-    plt.plot(range(1,len(valid_loss)+1),valid_loss,label='Validation Loss')
-
-    # find position of lowest validation loss
-    minposs = valid_loss.index(min(valid_loss))+1 
-    plt.axvline(minposs, linestyle='--', color='r',label='Early Stopping Checkpoint')
-
-    plt.xlabel('epochs')
-    plt.ylabel('loss')
-    plt.xlim(0, len(train_loss)+1) # consistent scale
-    plt.grid(True)
-    plt.legend()
-    plt.tight_layout()
-    fig.savefig(figName, bbox_inches='tight')
-    plt.close()
 
 
 def sample_batch(data, resp=0, cond=[1], batch_size=100, sample_mode='marginal'):
@@ -75,12 +56,20 @@ def sample_batch(data, resp=0, cond=[1], batch_size=100, sample_mode='marginal')
     return batch
 
 
-class MineNet(nn.Module):
+class MineMultiTaskNet(nn.Module):
     def __init__(self, input_size=2, hidden_size=100):
         super().__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, 1)
+        self.fc_x = nn.Linear(1, hidden_size)
+        self.fc_x_2 = nn.Linear(hidden_size, hidden_size)
+        self.fc_x_3 = nn.Linear(hidden_size, 1)
+
+        self.fc_y = nn.Linear(input_size, hidden_size)
+        self.fc_y_2 = nn.Linear(hidden_size, hidden_size)
+        self.fc_y_3 = nn.Linear(hidden_size, 1)
+
+        self.fc_xy = nn.Linear(input_size, hidden_size)
+        self.fc_xy_2 = nn.Linear(hidden_size, hidden_size)
+        self.fc_xy_3 = nn.Linear(hidden_size, 1)
         nn.init.normal_(self.fc1.weight,std=0.02)
         nn.init.constant_(self.fc1.bias, 0)
         nn.init.normal_(self.fc2.weight,std=0.02)
@@ -89,12 +78,21 @@ class MineNet(nn.Module):
         nn.init.constant_(self.fc3.bias, 0)
         
     def forward(self, input):
-        output = F.elu(self.fc1(input))
-        output = F.elu(self.fc2(output))
-        output = self.fc3(output)
-        return output
+        x = F.elu(self.fc_x(input[:,0]))
+        x_hidden = F.elu(self.fc_x_2(x))
+        x_output = F.elu(self.fc_x_3(x_hidden))
 
-class Mine():
+        y = F.elu(self.fc_y(input[:,1]))
+        y_hidden = F.elu(self.fc_y_2(y))
+        y_output = F.elu(self.fc_y_3(y_hidden))
+
+        xy = F.elu(self.fc_xy(input)) + x_hidden + y_hidden
+        xy_hidden = F.elu(self.fc_xy_2(xy))
+        xy_output = F.elu(self.fc_xy_3(xy_hidden))
+
+        return x_output, y_output, xy_output
+
+class MineMultiTask():
     def __init__(self, lr, batch_size, patience=int(20), iter_num=int(1e+3), log_freq=int(100), avg_freq=int(10), ma_rate=0.01, verbose=True, resp=0, cond=[1], log=True, sample_mode='marginal', y_label=""):
         self.lr = lr
         self.batch_size = batch_size
@@ -119,7 +117,7 @@ class Mine():
         else:
             self.y_label = y_label
         self.heatmap_frames = []  # for plotting heatmap animation
-        self.mine_net = MineNet(input_size=len(self.cond)+1)
+        self.mine_net = MineMultiTaskNet(input_size=len(self.cond)+1)
         self.mine_net_optim = optim.Adam(self.mine_net.parameters(), lr=self.lr)
 
     def fit(self, train_data, val_data):
@@ -185,7 +183,6 @@ class Mine():
                     y = np.linspace(self.Ymin, self.Ymax, 300)
                     xs, ys = np.meshgrid(x,y)
                     t = self.mine_net(torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))).detach().numpy()
-                    t = t.reshape(xs.shape[1], ys.shape[0])
                     # ixy = t - np.log(self.ma_et.mean().detach().numpy())
                     heatmap_animation_ax, c = plot_util.getHeatMap(heatmap_animation_ax, xs, ys, t)
                     self.heatmap_frames.append((c,))
@@ -217,35 +214,41 @@ class Mine():
         """
 
         # batch is a tuple of (joint, marginal)
-        joint , marginal = batch
+        joint , reference = batch
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
-        marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        mi_lb , t, et = self.mutual_information(joint, marginal)
-        self.ma_et = (1-ma_rate)*self.ma_et + ma_rate*torch.mean(et)
+        reference = torch.autograd.Variable(torch.FloatTensor(reference))
+        mi_lb, fx, fy, fxy, efx, efy, efxy = self.mutual_information(joint, reference)
+
+        self.ma_efx = (1-ma_rate)*self.ma_efx + ma_rate*torch.mean(efx)
+        self.ma_efy = (1-ma_rate)*self.ma_efy + ma_rate*torch.mean(efy)
+        self.ma_efxy = (1-ma_rate)*self.ma_efxy + ma_rate*torch.mean(efxy)
         
         # unbiasing use moving average
-        loss = -(torch.mean(t) - (1/self.ma_et.mean()).detach()*torch.mean(et))
-        # use biased estimator
-    #     loss = - mi_lb
+        loss = -(torch.mean(fx) - (1/self.ma_efx.mean()).detach()*torch.mean(efx)) \
+               -(torch.mean(fy) - (1/self.ma_efy.mean()).detach()*torch.mean(efy)) \
+               -(torch.mean(fxy) - (1/self.ma_efxy.mean()).detach()*torch.mean(efxy))
+
         lossTrain = loss
         mine_net_optim.zero_grad()
         autograd.backward(loss)
         mine_net_optim.step()
         return mi_lb, lossTrain
 
-    
-    def mutual_information(self, joint, marginal):
-        t = self.mine_net(joint)
-        et = torch.exp(self.mine_net(marginal))
-        mi_lb = torch.mean(t) - torch.log(torch.mean(et))
-        return mi_lb, t, et
+    def mutual_information(self, joint, reference):
+        fx, fy, fxy = self.mine_net(joint)
+        efx, efy, efxy = torch.exp(self.mine_net(reference))
+        h_x = torch.mean(fx) - torch.log(torch.mean(efx))
+        h_y = torch.mean(fy) - torch.log(torch.mean(efy))
+        h_xy = torch.mean(fxy) - torch.log(torch.mean(efxy))
+        mi_lb = h_x + h_y - h_xy
+        return mi_lb, fx, fy, fxy, efx, efy, efxy
 
     def forward_pass(self, X):
         joint = sample_batch(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], sample_mode='joint')
-        marginal = sample_batch(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], sample_mode=self.sample_mode)
+        reference = sample_batch(X, resp= self.resp, cond= self.cond, batch_size=X.shape[0], sample_mode=self.sample_mode)
         joint = torch.autograd.Variable(torch.FloatTensor(joint))
-        marginal = torch.autograd.Variable(torch.FloatTensor(marginal))
-        mi_lb , t, et = self.mutual_information(joint, marginal)
+        reference = torch.autograd.Variable(torch.FloatTensor(reference))
+        mi_lb, fx, fy, fxy, efx, efy, efxy = self.mutual_information(joint, reference)
         return mi_lb
 
     def predict(self, X):
@@ -295,7 +298,6 @@ class Mine():
         y = np.linspace(Ymin, Ymax, 300)
         xs, ys = np.meshgrid(x,y)
         z = self.mine_net(torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))).detach().numpy()
-        z = z.reshape(xs.shape[1], ys.shape[0])
         ax[2], c = plot_util.getHeatMap(ax[2], xs, ys, z)
 
         fig.colorbar(c, ax=ax[2])
@@ -311,6 +313,7 @@ class Mine():
         fig.savefig(figName, bbox_inches='tight')
         plt.close()
         
+
 
 
 

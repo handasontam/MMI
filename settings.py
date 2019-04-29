@@ -26,7 +26,7 @@ cpu = 20
 batch_size=256
 patience=int(250)
 iter_num=int(1e+9)
-lr = 1e-3
+lr = 2e-3
 moving_average_rate = 0.01
 
 
@@ -133,12 +133,12 @@ model = {
     #     ), 
     #     'color': 'pink'
     # }, 
-    # 'Cart Reg': {
-    #     'model': cartReg(
-    #         cvFold=3
-    #     ), 
-    #     'color': 'pink'
-    # },
+    'Cart Reg': {
+        'model': cartReg(
+            cvFold=3
+        ), 
+        'color': 'pink'
+    },
     'MINE_direct': {
         'model': Mine(
             lr=lr, 
@@ -177,7 +177,7 @@ model = {
 
 n_samples = batch_size * 20
 rhos = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 0.999 ]
-rhos = [0.999]
+# rhos = [0.999]
 widths = list(range(2, 12, 2))
 
 
