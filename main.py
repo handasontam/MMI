@@ -152,8 +152,7 @@ def plot(experiment_path):
 
     return 0
 
-
-if __name__ == "__main__":
+def run_experiment():
     # prompt
     experiment_name = input('Please enter the experiment name: ')
     experiment_path = os.path.join(settings.output_path, experiment_name)
@@ -169,5 +168,8 @@ if __name__ == "__main__":
             mmi_dir_path = os.path.dirname(os.path.abspath(__file__))
             settings_path = os.path.join(mmi_dir_path, 'settings.py')
             copyfile(settings_path, os.path.join(experiment_path, 'settings.py'))
-            break
+            break     
     plot(experiment_path)
+
+if __name__ == "__main__":
+    run_experiment()
