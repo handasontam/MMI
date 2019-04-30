@@ -1,6 +1,7 @@
 from .model.linear_regression import LinearReg
 from .model.mine import Mine
 from .model.mine_entropy import Mine_ent
+from .model.mine_multitask import MineMultiTask
 from .model.kraskov import Kraskov
 from .model.cart_regression import cartReg
 # from .model.jackknife import Jackknife
@@ -21,7 +22,7 @@ import math
 import os
 from datetime import datetime
 
-cpu = 20
+cpu = 10
 
 batch_size=256
 patience=int(250)
@@ -35,20 +36,20 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experime
 
 # ground truth is plotted in red
 model = {
-     'Linear Regression': {  # model name, for plotting the legend
-         'model': LinearReg(  # initialize the object
-             cvFold=3
-         ), 
-         'color': 'blue'  # for plotting
-     }, 
-     'Kraskov': {
-         'model': Kraskov(
-             discrete_features='auto', 
-             n_neighbors=3, 
-             random_state=None
-         ), 
-         'color': 'green'
-     }, 
+    #  'Linear Regression': {  # model name, for plotting the legend
+    #      'model': LinearReg(  # initialize the object
+    #          cvFold=3
+    #      ), 
+    #      'color': 'blue'  # for plotting
+    #  }, 
+    #  'Kraskov': {
+    #      'model': Kraskov(
+    #          discrete_features='auto', 
+    #          n_neighbors=3, 
+    #          random_state=None
+    #      ), 
+    #      'color': 'green'
+    #  }, 
     # 'LOO Shannon KDE': {
     #     'model': ShanKDE(
     #         numPart='loo', 
@@ -133,14 +134,29 @@ model = {
     #     ), 
     #     'color': 'pink'
     # }, 
-    'Cart Reg': {
-        'model': cartReg(
-            cvFold=3
-        ), 
-        'color': 'pink'
-    },
-    'MINE_direct': {
-        'model': Mine(
+    # 'Cart Reg': {
+    #     'model': cartReg(
+    #         cvFold=3
+    #     ), 
+    #     'color': 'pink'
+    # },
+    # 'MINE_direct': {
+    #     'model': Mine(
+    #         lr=lr, 
+    #         batch_size=batch_size, 
+    #         patience=patience, 
+    #         iter_num=iter_num, 
+    #         log_freq=int(100), 
+    #         avg_freq=int(10), 
+    #         ma_rate=moving_average_rate, 
+    #         verbose=False,
+    #         log=True,
+    #         sample_mode='marginal'
+    #     ), 
+    #     'color': 'orange'
+    # },
+    'MINE_multi_task': {
+        'model': MineMultiTask(
             lr=lr, 
             batch_size=batch_size, 
             patience=patience, 
@@ -150,23 +166,23 @@ model = {
             ma_rate=moving_average_rate, 
             verbose=False,
             log=True,
-            sample_mode='marginal'
+            sample_mode='unif'
         ), 
         'color': 'orange'
     },
-    'MINE_entropy': {
-        'model': Mine_ent(
-            lr=lr,  
-            batch_size=batch_size, 
-            patience=patience,
-            iter_num=iter_num, 
-            log_freq=int(100), 
-            avg_freq=int(10), 
-            ma_rate=moving_average_rate, 
-            verbose=False,
-        ), 
-        'color': 'purple'
-    },
+    # 'MINE_entropy': {
+    #     'model': Mine_ent(
+    #         lr=lr,  
+    #         batch_size=batch_size, 
+    #         patience=patience,
+    #         iter_num=iter_num, 
+    #         log_freq=int(100), 
+    #         avg_freq=int(10), 
+    #         ma_rate=moving_average_rate, 
+    #         verbose=False,
+    #     ), 
+    #     'color': 'purple'
+    # },
     # 'Jackknife': {
     #     'model': Jackknife(
     #         n_sim=5
