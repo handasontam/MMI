@@ -55,19 +55,12 @@ def saveResultsFig(results_dict, experiment_path=""):
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
-def get_estimation(data_model, data_name, varying_param_name, varying_param_value, experiment_path):
+def get_estimation(model_name, model, data_model, data_name, varying_param_name, varying_param_value, experiment_path):
     """
-    Returns: results, example:
-                
-        results example: 
-        {
-            'Ground Truth': 0.5, 
-            'Linear Regression': 0.4, 
-            'SVM': 0.4, ...
-        }
+    Returns: mi estimate (float)
     """
 
-    results = dict()
+    # results = dict()
     data = data_model.data
     ground_truth = data_model.ground_truth
 
@@ -93,23 +86,22 @@ def get_estimation(data_model, data_name, varying_param_name, varying_param_valu
 
 
     # Fit Algorithm
-    for model_name, model in settings.model.items():
-        # For plotting extra figure inside the training
-        model['model'].model_name = model_name
-        model['model'].prefix = os.path.join(prefix_name_loop, model_name)
-        os.makedirs(model['model'].prefix)
-        model['model'].paramName = varying_param_name
-        model['model'].paramValue = varying_param_value
-        model['model'].ground_truth = ground_truth
-        mi_estimation = model['model'].predict(data)
+    # For plotting extra figure inside the training
+    model['model'].model_name = model_name
+    model['model'].prefix = os.path.join(prefix_name_loop, model_name)
+    os.makedirs(model['model'].prefix)
+    model['model'].paramName = varying_param_name
+    model['model'].paramValue = varying_param_value
+    model['model'].ground_truth = ground_truth
+    mi_estimation = model['model'].predict(data)
 
-        # Save Results
-        results[model_name] = mi_estimation
-    
+    # Save Results
+    # results[model_name] = mi_estimation
+
     # Ground Truth
-    results['Ground Truth'] = ground_truth
+    # results['Ground Truth'] = ground_truth
 
-    return results, data_name, varying_param_value
+    return mi_estimation, ground_truth, model_name, data_name, varying_param_value
 
 def plot(experiment_path):
     # Initialize the results dictionary
@@ -137,16 +129,19 @@ def plot(experiment_path):
             results['Ground Truth'][data_name] = []
     
     # # Main Loop
-    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(data['model'](**kwargs), 
+    r = Parallel(n_jobs=settings.cpu)(delayed(get_estimation)(model_name, 
+                                                              model, 
+                                                              data['model'](**kwargs), 
                                                               data_name, 
                                                               data['varying_param_name'], 
                                                               kwargs[data['varying_param_name']], 
                                                               experiment_path) 
+                                                                    for model_name, model in tqdm(settings.model.items())
                                                                     for data_name, data in tqdm(settings.data.items())
                                                                     for kwargs in tqdm(data['kwargs']))
-    for (aggregate_result, data_name, varying_param_value) in r:
-        for model_name, mi_estimate in aggregate_result.items():
-            results[model_name][data_name].append((varying_param_value, mi_estimate))
+    for (mi_estimate, ground_truth, model_name, data_name, varying_param_value) in r:
+        results[model_name][data_name].append((varying_param_value, mi_estimate))
+        results['Ground Truth'][data_name].append((varying_param_value, ground_truth))
     # Plot and save
     saveResultsFig(results, experiment_path=experiment_path)
 

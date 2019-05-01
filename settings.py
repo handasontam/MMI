@@ -1,6 +1,7 @@
 from .model.linear_regression import LinearReg
 from .model.mine import Mine
 from .model.mine_entropy import Mine_ent
+from .model.mine_multitask import MineMultiTask
 from .model.kraskov import Kraskov
 from .model.cart_regression import cartReg
 # from .model.jackknife import Jackknife
@@ -151,6 +152,21 @@ model = {
             verbose=False,
             log=True,
             sample_mode='marginal'
+        ), 
+        'color': 'orange'
+    },
+    'MINE_multi_task': {
+        'model': MineMultiTask(
+            lr=lr, 
+            batch_size=batch_size, 
+            patience=patience, 
+            iter_num=iter_num, 
+            log_freq=int(100), 
+            avg_freq=int(10), 
+            ma_rate=moving_average_rate, 
+            verbose=False,
+            log=True,
+            sample_mode='unif'
         ), 
         'color': 'orange'
     },
