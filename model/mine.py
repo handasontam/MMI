@@ -180,20 +180,20 @@ class Mine():
                     if self.verbose:
                         print("Early stopping")
                     break
-                if self.log:
-                    x = np.linspace(self.Xmin, self.Xmax, 300)
-                    y = np.linspace(self.Ymin, self.Ymax, 300)
-                    xs, ys = np.meshgrid(x,y)
-                    t = self.mine_net(torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))).detach().numpy()
-                    t = t.reshape(xs.shape[1], ys.shape[0])
-                    # ixy = t - np.log(self.ma_et.mean().detach().numpy())
-                    heatmap_animation_ax, c = plot_util.getHeatMap(heatmap_animation_ax, xs, ys, t)
-                    self.heatmap_frames.append((c,))
+                # if self.log:
+                    # x = np.linspace(self.Xmin, self.Xmax, 300)
+                    # y = np.linspace(self.Ymin, self.Ymax, 300)
+                    # xs, ys = np.meshgrid(x,y)
+                    # t = self.mine_net(torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))).detach().numpy()
+                    # t = t.reshape(xs.shape[1], ys.shape[0])
+                    # # ixy = t - np.log(self.ma_et.mean().detach().numpy())
+                    # heatmap_animation_ax, c = plot_util.getHeatMap(heatmap_animation_ax, xs, ys, t)
+                    # self.heatmap_frames.append((c,))
     
         if self.log:
-            writer = animation.writers['ffmpeg'](fps=1, bitrate=1800)
-            heatmap_animation = animation.ArtistAnimation(heatmap_animation_fig, self.heatmap_frames, interval=200, blit=False)
-            heatmap_animation.save(os.path.join(self.prefix, 'heatmap.mp4'), writer=writer)
+            # writer = animation.writers['ffmpeg'](fps=1, bitrate=1800)
+            # heatmap_animation = animation.ArtistAnimation(heatmap_animation_fig, self.heatmap_frames, interval=200, blit=False)
+            # heatmap_animation.save(os.path.join(self.prefix, 'heatmap.mp4'), writer=writer)
             #Save result to files
             avg_train_mi_lb = np.array(self.avg_train_mi_lb)
             np.savetxt(os.path.join(self.prefix, "avg_train_mi_lb.txt"), avg_train_mi_lb)
