@@ -169,7 +169,7 @@ class MineMultiTask():
             batchTrain = sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode='joint'), \
                          sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode=self.sample_mode)
             _, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim)
-            train_loss.append(lossTrain.item())
+            train_loss.append(lossTrain)
             
             _, lossVal = self.forward_pass(val_data)
             valid_loss.append(lossVal)
