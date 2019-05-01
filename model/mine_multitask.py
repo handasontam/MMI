@@ -168,10 +168,10 @@ class MineMultiTask():
             #get train data
             batchTrain = sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode='joint'), \
                          sample_batch(train_data, resp= self.resp, cond= self.cond, batch_size=self.batch_size, sample_mode=self.sample_mode)
-            mi_lb, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim)
+            _, lossTrain = self.update_mine_net(batchTrain, self.mine_net_optim)
             train_loss.append(lossTrain.item())
             
-            mi_lb_valid, lossVal = self.forward_pass(val_data)
+            _, lossVal = self.forward_pass(val_data)
             valid_loss.append(lossVal)
             
             if (i+1)%(self.avg_freq)==0:
@@ -239,22 +239,26 @@ class MineMultiTask():
         # unbiasing use moving average
         loss = (-(torch.mean(fx) - (1/self.ma_efx)*torch.mean(efx)) \
                -(torch.mean(fy) - (1/self.ma_efy)*torch.mean(efy)) \
-               -(torch.mean(fxy) - (1/self.ma_efxy)*torch.mean(efxy))) / 3
+               -(torch.mean(fxy) - (1/self.ma_efxy)*torch.mean(efxy)))
 
         lossTrain = loss
         mine_net_optim.zero_grad()
         autograd.backward(loss)
         mine_net_optim.step()
-        return mi_lb, lossTrain
+        return mi_lb, lossTrain.item()
 
     def mutual_information(self, joint, reference):
         fx, fy, fxy = self.mine_net(joint)
         fx_ref, fy_ref, fxy_ref = self.mine_net(reference)
         efx_ref, efy_ref, efxy_ref = torch.exp(fx_ref), torch.exp(fy_ref), torch.exp(fxy_ref)
-        h_x = -torch.mean(fx) - torch.log(torch.mean(efx_ref))
-        h_y = -torch.mean(fy) - torch.log(torch.mean(efy_ref))
-        h_xy = -torch.mean(fxy) - torch.log(torch.mean(efxy_ref))
-        mi_lb = h_x + h_y - h_xy
+        if self.sample_mode == 'unif':
+            h_x = np.log(self.Xmax-self.Xmin) - torch.mean(fx) - torch.log(torch.mean(efx_ref))
+            h_y = np.log(self.Ymax-self.Ymin) - torch.mean(fy) - torch.log(torch.mean(efy_ref))
+            h_xy = (np.log(self.Xmax-self.Xmin) + np.log(self.Ymax-self.Ymin)) \
+                - torch.mean(fxy) - torch.log(torch.mean(efxy_ref))
+            mi_lb = h_x + h_y - h_xy
+        else:
+            raise ValueError('sample mode: {} not supported yet.'.format(self.sample_mode))
         return mi_lb, fx, fy, fxy, efx_ref, efy_ref, efxy_ref
 
     def forward_pass(self, X):
@@ -284,18 +288,9 @@ class MineMultiTask():
         self.fit(X_train, X_test)
     
         mi_lb, _ = self.forward_pass(X_test)
-        mi_lb = mi_lb.item()
 
         if self.log:
             self.savefig(X, mi_lb)
-        if self.sample_mode == 'unif':
-            if 0 == len(self.cond):
-                X_max, X_min = X[:,self.resp].max(axis=0), X[:,self.resp].min(axis=0)
-                cross = np.log(X_max-X_min)
-            else:
-                X_max, X_min = X.max(axis=0), X.min(axis=0)
-                cross = sum(np.log(X_max-X_min))
-            return cross - mi_lb
         return mi_lb
 
     def savefig(self, X, ml_lb_estimate):
