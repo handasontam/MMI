@@ -237,9 +237,9 @@ class MineMultiTask():
         self.ma_efxy = ((1-ma_rate)*self.ma_efxy + ma_rate*torch.mean(efxy)).item()
         
         # unbiasing use moving average
-        loss = (-(torch.mean(fx) - (1/self.ma_efx)*torch.mean(efx)) \
+        loss = -(torch.mean(fx) - (1/self.ma_efx)*torch.mean(efx)) \
                -(torch.mean(fy) - (1/self.ma_efy)*torch.mean(efy)) \
-               -(torch.mean(fxy) - (1/self.ma_efxy)*torch.mean(efxy)))
+               -(torch.mean(fxy) - (1/self.ma_efxy)*torch.mean(efxy))
 
         lossTrain = loss
         mine_net_optim.zero_grad()
@@ -252,10 +252,10 @@ class MineMultiTask():
         fx_ref, fy_ref, fxy_ref = self.mine_net(reference)
         efx_ref, efy_ref, efxy_ref = torch.exp(fx_ref), torch.exp(fy_ref), torch.exp(fxy_ref)
         if self.sample_mode == 'unif':
-            h_x = np.log(self.Xmax-self.Xmin) - torch.mean(fx) - torch.log(torch.mean(efx_ref))
-            h_y = np.log(self.Ymax-self.Ymin) - torch.mean(fy) - torch.log(torch.mean(efy_ref))
+            h_x = np.log(self.Xmax-self.Xmin) - (torch.mean(fx) - torch.log(torch.mean(efx_ref)))
+            h_y = np.log(self.Ymax-self.Ymin) - (torch.mean(fy) - torch.log(torch.mean(efy_ref)))
             h_xy = (np.log(self.Xmax-self.Xmin) + np.log(self.Ymax-self.Ymin)) \
-                - torch.mean(fxy) - torch.log(torch.mean(efxy_ref))
+                - (torch.mean(fxy) - torch.log(torch.mean(efxy_ref)))
             mi_lb = h_x + h_y - h_xy
         else:
             raise ValueError('sample mode: {} not supported yet.'.format(self.sample_mode))
@@ -268,9 +268,9 @@ class MineMultiTask():
         reference = torch.autograd.Variable(torch.FloatTensor(reference))
         mi_lb, fx, fy, fxy, efx, efy, efxy = self.mutual_information(joint, reference)
 
-        loss = (-(torch.mean(fx) - (1/self.ma_efx)*torch.mean(efx)) \
+        loss = -(torch.mean(fx) - (1/self.ma_efx)*torch.mean(efx)) \
                -(torch.mean(fy) - (1/self.ma_efy)*torch.mean(efy)) \
-               -(torch.mean(fxy) - (1/self.ma_efxy)*torch.mean(efxy))) / 3
+               -(torch.mean(fxy) - (1/self.ma_efxy)*torch.mean(efxy))
 
         return mi_lb.item(), loss.item()
 
