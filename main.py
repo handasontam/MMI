@@ -66,7 +66,7 @@ def get_estimation(model_name, model, data_model, data_name, varying_param_name,
 
     prefix_name_loop = os.path.join(experiment_path, "{}_{}={}/".format(data_name, varying_param_name, varying_param_value))
     if not os.path.exists(prefix_name_loop):
-        os.makedirs(prefix_name_loop)
+        os.makedirs(prefix_name_loop, exist_ok=True)
         
     #Plot Ground Truth MI
     fig, ax = plt.subplots(figsize=(15, 15))
