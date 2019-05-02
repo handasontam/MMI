@@ -168,7 +168,7 @@ model = {
             log=True,
             sample_mode='unif'
         ), 
-        'color': 'orange'
+        'color': 'grey'
     },
     'MINE_entropy': {
         'model': Mine_ent(
