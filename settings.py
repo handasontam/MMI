@@ -24,10 +24,10 @@ from datetime import datetime
 
 cpu = 20
 
-batch_size=256
-patience=int(250)
+batch_size=32
+patience=int(1000)
 iter_num=int(1e+9)
-lr = 2e-3
+lr = 1e-3
 moving_average_rate = 0.01
 
 
@@ -134,12 +134,12 @@ model = {
     #     ), 
     #     'color': 'pink'
     # }, 
-    'Cart Reg': {
-        'model': cartReg(
-            cvFold=3
-        ), 
-        'color': 'pink'
-    },
+    # 'Cart Reg': {
+    #     'model': cartReg(
+    #         cvFold=3
+    #     ), 
+    #     'color': 'pink'
+    # },
     'MINE_direct': {
         'model': Mine(
             lr=lr, 
